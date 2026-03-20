@@ -1,88 +1,134 @@
-<!DOCTYPE html>
-<html lang="ru">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>FilmsBot AI</title>
-    <script src="https://telegram.org/js/telegram-web-app.js"></script>
-    <style>
-        :root { --tg-bg: #fff; --accent: #ff3b30; }
-        body { margin: 0; background: var(--tg-bg); font-family: -apple-system, sans-serif; height: 100vh; overflow: hidden; }
-        .header { padding: 12px; background: rgba(255,255,255,0.8); backdrop-filter: blur(10px); border-bottom: 0.5px solid #ddd; }
-        .search-bar { background: #f0f0f0; border-radius: 10px; padding: 8px; display: flex; }
-        .search-bar input { border: none; background: transparent; width: 100%; font-size: 16px; outline: none; }
-        .scroll-area { height: calc(100vh - 65px); overflow-y: auto; padding: 15px; padding-bottom: 150px; }
-        .movie-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
-        .movie-card { background: #fff; border-radius: 15px; overflow: hidden; position: relative; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
-        .movie-card img { width: 100%; height: 250px; object-fit: cover; background: #eee; }
-        .movie-title { padding: 8px; text-align: center; font-size: 14px; font-weight: 600; }
-        .btn-overlay { position: absolute; top: 10px; width: 34px; height: 34px; background: #fff; border-radius: 50%; border: none; z-index: 5; display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 5px rgba(0,0,0,0.2); }
-        .btn-dislike { left: 10px; opacity: 0; pointer-events: none; }
-        .btn-heart { right: 10px; color: #ccc; font-size: 20px; }
-        .is-liked { color: var(--accent) !important; }
-        .next-btn { position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%); padding: 15px 45px; border-radius: 30px; border: none; background: #000; color: #fff; font-weight: 700; z-index: 100; }
-        .bottom-nav { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); width: 70%; height: 60px; background: #fff; border-radius: 30px; display: none; align-items: center; justify-content: space-around; box-shadow: 0 5px 15px rgba(0,0,0,0.1); }
-        .status-err { text-align: center; margin-top: 100px; color: red; padding: 20px; }
-    </style>
-</head>
-<body>
-    <div class="header"><div class="search-bar"><input type="text" placeholder="Поиск фильма..."></div></div>
-    <div class="scroll-area"><div id="home" class="movie-grid"><div style="text-align:center;width:200%;margin-top:50px;">Загрузка...</div></div></div>
-    <button id="next-btn" class="next-btn" onclick="unlockApp()">Далее</button>
-    <div id="navbar" class="bottom-nav"><div onclick="location.reload()">🏠</div><div>❤️</div></div>
-
 <script>
     const tg = window.Telegram.WebApp;
-    // !!! ЗАМЕНИ ЭТУ ССЫЛКУ НА СВОЮ ИЗ NGROK !!!
-    const API = "https://unrebuked-overinsistently-chasidy.ngrok-free.dev"; 
-
+    // ЗАМЕНИ НА СВОЮ ССЫЛКУ NGROK
+    const API = "https://ВАША-ССЫЛКА.ngrok-free.dev"; 
+    
     let allMovies = [];
     let likes = new Set();
+    let dislikes = new Set();
     let isUnlocked = false;
 
     async function init() {
         tg.ready();
         tg.expand();
+        
+        if (tg.initDataUnsafe?.user) {
+            document.getElementById('u-name').innerText = tg.initDataUnsafe.user.first_name.toUpperCase();
+            if (tg.initDataUnsafe.user.photo_url) document.getElementById('u-pic').src = tg.initDataUnsafe.user.photo_url;
+        }
+
         try {
             const r = await fetch(`${API}/movies`, { headers: {'ngrok-skip-browser-warning': 'true'} });
-            if (!r.ok) throw new Error("Сервер не отвечает");
             allMovies = await r.json();
-            render(allMovies);
-        } catch(e) {
-            document.getElementById('home').innerHTML = `<div class="status-err">ОШИБКА ПОДКЛЮЧЕНИЯ!<br><small>Проверь main.py и ссылку API</small></div>`;
+            renderMovies(allMovies, 'home');
+        } catch(e) { 
+            document.getElementById('home').innerHTML = '<div class="empty-msg">Ошибка подключения к серверу</div>';
         }
     }
 
-    function render(list) {
-        const box = document.getElementById('home');
+    function renderMovies(list, targetId) {
+        const box = document.getElementById(targetId);
         box.innerHTML = '';
+        if (list.length === 0) {
+            box.innerHTML = '<div class="empty-msg">Ничего не нашли 🔍</div>';
+            return;
+        }
+        
         list.forEach(m => {
             const card = document.createElement('div');
             card.className = 'movie-card';
             card.innerHTML = `
-                <img src="${m.poster_url}" referrerpolicy="no-referrer" onerror="this.src='https://via.placeholder.com/250x350?text=Error'">
+                <img src="${m.poster_url}" referrerpolicy="no-referrer" onerror="this.src='https://via.placeholder.com/260x380?text=No+Poster'">
                 <div class="movie-title">${m.title}</div>
-                <button class="btn-overlay btn-dislike" style="opacity:${isUnlocked?1:0};" onclick="rate(${m.id},'dislike')">❌</button>
-                <button class="btn-overlay btn-heart ${likes.has(m.id)?'is-liked':''}" onclick="rate(${m.id},'like',this)">❤️</button>
+                <button class="btn-overlay btn-dislike" style="opacity: ${isUnlocked ? 1 : 0}; pointer-events: ${isUnlocked ? 'auto' : 'none'}" onclick="doDislike(this, ${m.id})">
+                    <svg><use xlink:href="#icon-dislike"></use></svg>
+                </button>
+                <button class="btn-overlay btn-heart ${likes.has(m.id)?'is-liked':''}" onclick="doLike(this, ${m.id})">
+                    <svg><use xlink:href="#icon-heart"></use></svg>
+                </button>
             `;
             box.appendChild(card);
         });
     }
 
-    async function rate(id, action, btn) {
-        if(action === 'like') { likes.add(id); if(btn) btn.classList.add('is-liked'); }
-        fetch(`${API}/rate`, { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({movie_id: id, action: action}) });
+    async function doLike(btn, id) {
+        btn.classList.add('pulse'); setTimeout(() => btn.classList.remove('pulse'), 200);
+        if (likes.has(id)) {
+            likes.delete(id);
+            btn.classList.remove('is-liked');
+        } else {
+            likes.add(id);
+            dislikes.delete(id);
+            btn.classList.add('is-liked');
+            btn.parentElement.querySelector('.btn-dislike').classList.remove('is-disliked');
+        }
+        updateCounter();
+        sendRate(id, 'like');
+        if (isUnlocked) loadRecommendations();
+    }
+
+    async function doDislike(btn, id) {
+        btn.classList.add('pulse'); setTimeout(() => btn.classList.remove('pulse'), 200);
+        if (dislikes.has(id)) {
+            dislikes.delete(id);
+            btn.classList.remove('is-disliked');
+        } else {
+            dislikes.add(id);
+            likes.delete(id);
+            btn.classList.add('is-disliked');
+            btn.parentElement.querySelector('.btn-heart').classList.remove('is-liked');
+        }
+        updateCounter();
+        sendRate(id, 'dislike');
+        if (isUnlocked) loadRecommendations();
+    }
+
+    function updateCounter() {
+        document.getElementById('l-count').innerText = likes.size;
         tg.HapticFeedback.impactOccurred('light');
     }
 
-    function unlockApp() {
+    async function sendRate(id, action) {
+        fetch(`${API}/rate`, {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({ movie_id: id, action: action })
+        });
+    }
+
+    async function unlockApp() {
         isUnlocked = true;
         document.getElementById('next-btn').style.display = 'none';
         document.getElementById('navbar').style.display = 'flex';
-        render(allMovies);
+        loadRecommendations();
+        tg.HapticFeedback.notificationOccurred('success');
+    }
+
+    async function loadRecommendations() {
+        const r = await fetch(`${API}/recommend`, {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({ liked_movies: Array.from(likes), disliked_movies: Array.from(dislikes) })
+        });
+        allMovies = await r.json();
+        renderMovies(allMovies, 'home');
+    }
+
+    function tab(id, el) {
+        document.querySelectorAll('.nav-link').forEach(n => n.classList.remove('active'));
+        el.classList.add('active');
+        document.querySelectorAll('.page, .profile-wrap').forEach(p => p.style.display = 'none');
+        
+        if (id === 'profile') {
+            document.getElementById('profile').style.display = 'flex';
+        } else if (id === 'favs') {
+            document.getElementById('favs').style.display = 'grid';
+            const favMovies = allMovies.filter(m => likes.has(m.id));
+            renderMovies(favMovies, 'favs');
+        } else {
+            document.getElementById('home').style.display = 'grid';
+        }
     }
 
     init();
 </script>
-</body>
-</html>
