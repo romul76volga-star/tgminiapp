@@ -1,165 +1,87 @@
-<script>
-    const tg = window.Telegram.WebApp;
-    // УБЕДИСЬ, ЧТО ЭТОТ URL СОВПАДАЕТ С ТВОИМ NGROK
-    const API = "https://unrebuked-overinsistently-chasidy.ngrok-free.dev"; 
-    
-    let movies = [];
-    let likes = new Set();
-    let dislikes = new Set();
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Movie AI</title>
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <style>
+        body { margin: 0; background: #fff; font-family: sans-serif; }
+        .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; padding: 10px; }
+        .card { position: relative; border-radius: 15px; overflow: hidden; background: #f0f0f0; height: 250px; }
+        .card img { width: 100%; height: 100%; object-fit: cover; }
+        .title { position: absolute; bottom: 0; width: 100%; background: rgba(0,0,0,0.6); color: #fff; font-size: 12px; padding: 5px; text-align: center; }
+        .btn { position: absolute; top: 10px; padding: 5px; border: none; border-radius: 50%; width: 30px; height: 30px; cursor: pointer; }
+        .btn-like { right: 10px; background: #fff; }
+        .btn-dislike { left: 10px; background: #fff; }
+        .is-liked { background: #ff3b30; color: white; }
+    </style>
+</head>
+<body>
+    <div id="app" class="grid"></div>
 
-    async function loadMovies() {
-        const isAI = likes.size > 0 || dislikes.size > 0;
-        const url = isAI ? `${API}/recommend` : `${API}/movies`;
-        
-        // Настройки запроса
-        const options = {
-            method: isAI ? 'POST' : 'GET',
-            headers: {
-                'Content-Type': 'application/json',
-                'ngrok-skip-browser-warning': 'true'
+    <script>
+        const tg = window.Telegram.WebApp;
+        // ЗАМЕНИ НА СВОЙ NGROK
+        const API = "https://unrebuked-overinsistently-chasidy.ngrok-free.dev";
+
+        let likes = new Set();
+        let dislikes = new Set();
+
+        async function load() {
+            const isAI = likes.size > 0 || dislikes.size > 0;
+            const url = isAI ? `${API}/recommend` : `${API}/movies`;
+            
+            try {
+                const response = await fetch(url, {
+                    method: isAI ? 'POST' : 'GET',
+                    headers: { 'Content-Type': 'application/json', 'ngrok-skip-browser-warning': 'true' },
+                    body: isAI ? JSON.stringify({ liked_movies: Array.from(likes), disliked_movies: Array.from(dislikes) }) : null
+                });
+                const movies = await response.json();
+                render(movies);
+            } catch (e) {
+                console.error(e);
+                document.getElementById('app').innerText = "Ошибка сервера. Проверь ngrok.";
             }
-        };
+        }
 
-        if (isAI) {
-            options.body = JSON.stringify({ 
-                liked_movies: Array.from(likes), 
-                disliked_movies: Array.from(dislikes) 
+        function render(movies) {
+            const box = document.getElementById('app');
+            box.innerHTML = '';
+            movies.forEach(m => {
+                const div = document.createElement('div');
+                div.className = 'card';
+                div.innerHTML = `
+                    <img src="${m.poster_url}">
+                    <div class="title">${m.title}</div>
+                    <button class="btn btn-dislike" onclick="action(${m.id}, 'dislike')">✖</button>
+                    <button class="btn btn-like ${likes.has(m.id) ? 'is-liked' : ''}" onclick="action(${m.id}, 'like')">❤</button>
+                `;
+                box.appendChild(div);
             });
         }
 
-        try {
-            const r = await fetch(url, options);
-            if (!r.ok) throw new Error(`Ошибка сервера: ${r.status}`);
-            
-            const data = await r.json();
-            
-            // Проверка: если сервер прислал массив, обновляем экран
-            if (Array.isArray(data)) {
-                movies = data;
-                renderHome();
-            }
-        } catch(e) { 
-            console.error("Ошибка при получении данных:", e);
-            // Если экран белый — значит fetch упал. Попробуй вывести алерт для теста:
-            // alert("Сервер недоступен!"); 
-        }
-    }
-
-    function renderHome() {
-        const box = document.getElementById('home');
-        if (!box) return;
-        
-        box.innerHTML = '';
-        
-        if (movies.length === 0) {
-            box.innerHTML = '<div class="empty-msg">ФИЛЬМОВ НЕ НАЙДЕНО</div>';
-            return;
-        }
-
-        movies.forEach(m => {
-            const card = document.createElement('div');
-            card.className = 'movie-card';
-            // Добавили проверку на наличие данных в объекте m
-            const poster = m.poster_url || 'https://via.placeholder.com/280x400?text=No+Poster';
-            const title = m.title || 'Без названия';
-            
-            card.innerHTML = `
-                <img src="${poster}" onerror="this.src='https://via.placeholder.com/280x400?text=Error'">
-                <div class="movie-title">${title}</div>
-                <button class="btn-overlay btn-dislike" onclick="doDislike(this, ${m.id})">
-                    <svg><use xlink:href="#icon-dislike"></use></svg>
-                </button>
-                <button class="btn-overlay btn-heart ${likes.has(m.id) ? 'is-liked' : ''}" onclick="doLike(this, ${m.id})">
-                    <svg><use xlink:href="#icon-heart"></use></svg>
-                </button>`;
-            box.appendChild(card);
-        });
-    }
-
-    function doLike(btn, id) {
-        btn.classList.toggle('is-liked');
-        if (likes.has(id)) {
-            likes.delete(id);
-        } else {
-            likes.add(id);
-            dislikes.delete(id);
-        }
-        updateAll();
-        
-        // Отправляем лайк на сервер в базу данных (в твой @app.post("/rate"))
-        fetch(`${API}/rate`, {
-            method: 'POST',
-            headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({ movie_id: id, action: 'like' })
-        });
-    }
-
-    function doDislike(btn, id) {
-        if (dislikes.has(id)) {
-            dislikes.delete(id);
-        } else {
-            dislikes.add(id);
-            likes.delete(id);
-        }
-        updateAll();
-
-        // Отправляем дизлайк на сервер
-        fetch(`${API}/rate`, {
-            method: 'POST',
-            headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({ movie_id: id, action: 'dislike' })
-        });
-    }
-
-    function updateAll() {
-        const counter = document.getElementById('l-count');
-        if (counter) counter.innerText = likes.size;
-        
-        if (tg.HapticFeedback) {
-            tg.HapticFeedback.impactOccurred('medium');
-        }
-        
-        loadMovies(); 
-    }
-
-    function unlockApp() {
-        document.getElementById('next-btn').style.display = 'none';
-        document.getElementById('navbar').style.display = 'flex';
-        document.querySelectorAll('.btn-dislike').forEach(b => b.style.opacity = "1");
-    }
-
-    function tab(id, el) {
-        document.querySelectorAll('.nav-link').forEach(n => n.classList.remove('active'));
-        el.classList.add('active');
-        
-        ['home', 'favs', 'profile'].forEach(p => {
-            const page = document.getElementById(p);
-            if (page) page.style.display = 'none';
-        });
-
-        const activePage = document.getElementById(id);
-        if (activePage) {
-            activePage.style.display = (id === 'profile' ? 'flex' : 'grid');
-        }
-        
-        if (id === 'favs') {
-            const fBox = document.getElementById('favs');
-            fBox.innerHTML = '';
-            const filtered = movies.filter(m => likes.has(m.id));
-            if (filtered.length === 0) {
-                fBox.innerHTML = '<div class="empty-msg">ПУСТО</div>';
+        async function action(id, type) {
+            if (type === 'like') {
+                likes.add(id); dislikes.delete(id);
             } else {
-                filtered.forEach(m => {
-                    const card = document.createElement('div'); 
-                    card.className = 'movie-card';
-                    card.innerHTML = `<img src="${m.poster_url}"><div class="movie-title">${m.title}</div>`;
-                    fBox.appendChild(card);
-                });
+                dislikes.add(id); likes.delete(id);
             }
-        }
-    }
+            
+            // Отправляем на сервер
+            fetch(`${API}/rate`, {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ movie_id: id, action: type })
+            });
 
-    // Старт
-    loadMovies();
-    tg.expand();
-</script>
+            tg.HapticFeedback.impactOccurred('light');
+            load(); // Обновляем список
+        }
+
+        load();
+        tg.expand();
+    </script>
+</body>
+</html>
