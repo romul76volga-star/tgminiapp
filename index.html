@@ -3,227 +3,199 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>FilmsBot Ultimate</title>
+    <title>FilmsBot Fixed</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <style>
-        :root { --glass: rgba(255, 255, 255, 0.7); --border: rgba(255, 255, 255, 0.3); }
-        
         body { 
             margin: 0; padding: 0; background-color: #fff; 
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-            height: 100vh; overflow: hidden; color: #000;
+            font-family: -apple-system, system-ui, sans-serif;
+            height: 100vh; overflow: hidden;
         }
 
-        /* ГОРЯЧАЯ ПРАВКА: СТЕКЛО СВЕРХУ */
+        /* ВЕРХНЯЯ ПАНЕЛЬ СО СТЕКЛОМ */
         .header {
             position: sticky; top: 0; z-index: 100;
-            background: var(--glass); backdrop-filter: blur(15px); -webkit-backdrop-filter: blur(15px);
+            background: rgba(255, 255, 255, 0.7); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
             padding: 10px 15px; border-bottom: 0.5px solid rgba(0,0,0,0.1);
         }
-
-        .search-container {
+        .search-bar {
             background: rgba(0, 0, 0, 0.05); border-radius: 12px;
-            padding: 8px 12px; display: flex; align-items: center; gap: 10px;
+            padding: 8px 12px; display: flex; align-items: center; gap: 8px;
         }
-        .search-container img { width: 18px; height: 18px; opacity: 0.6; } /* Твоя лупа */
-        .search-text { color: #8e8e93; font-size: 17px; }
+        .search-bar img { width: 20px; height: 20px; opacity: 0.8; }
+        .search-bar span { color: #8e8e93; font-size: 17px; }
 
-        /* СЕТКА ФИЛЬМОВ */
-        .content { height: calc(100vh - 60px); overflow-y: auto; padding: 15px; padding-bottom: 120px; }
-        .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
+        /* ОСНОВНОЙ КОНТЕНТ */
+        .scroll-area { height: calc(100vh - 60px); overflow-y: auto; padding: 15px; padding-bottom: 150px; }
+        .movie-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
 
-        /* КАРТОЧКА: ПРАВИЛЬНЫЙ РАЗМЕР */
-        .card { 
+        /* ПОСТЕРЫ (УВЕЛИЧЕННЫЕ) */
+        .movie-card { 
             background: #fff; border-radius: 20px; overflow: hidden; position: relative;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.05); display: flex; flex-direction: column;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.05);
         }
-        .card img { width: 100%; height: 240px; object-fit: cover; }
-        .card-title { padding: 10px; text-align: center; font-weight: 600; font-size: 15px; }
+        .movie-card img { width: 100%; height: 260px; object-fit: cover; background: #f0f0f0; }
+        .movie-card .title { padding: 10px; text-align: center; font-weight: 600; font-size: 15px; color: #000; }
 
         /* КНОПКИ НА ПОСТЕРЕ */
-        .card-btn {
-            position: absolute; top: 10px; width: 35px; height: 35px;
-            background: rgba(255, 255, 255, 0.9); border-radius: 50%;
+        .btn-overlay {
+            position: absolute; top: 10px; width: 36px; height: 36px;
+            background: rgba(255,255,255,0.9); border-radius: 50%;
             display: flex; align-items: center; justify-content: center; border: none;
         }
-        .btn-dislike { left: 10px; opacity: 0; transition: 0.3s; } /* Появится после 'Далее' */
-        .btn-like { right: 10px; }
-        .card-btn img { width: 20px; height: 20px; }
+        .btn-dislike { left: 10px; opacity: 0; transition: 0.3s; }
+        .btn-heart { right: 10px; }
+        .btn-overlay img { width: 20px; height: 20px; }
 
-        /* КНОПКА ДАЛЕЕ: ЭФФЕКТ СТЕКЛА */
-        .next-btn {
+        /* СТЕКЛЯННАЯ КНОПКА ДАЛЕЕ */
+        .next-button {
             position: fixed; bottom: 100px; left: 50%; transform: translateX(-50%);
-            padding: 12px 45px; border-radius: 25px; border: 1px solid var(--border);
-            background: rgba(0, 0, 0, 0.8); color: white; font-weight: bold;
-            backdrop-filter: blur(10px); z-index: 1000;
+            padding: 14px 50px; border-radius: 30px; border: 1px solid rgba(255,255,255,0.3);
+            background: rgba(0, 0, 0, 0.85); color: #fff; font-weight: 700;
+            backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); z-index: 1000;
         }
 
-        /* НИЖНЯЯ ПАНЕЛЬ: СТЕКЛО */
-        .nav {
-            position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%);
-            width: 90%; max-width: 350px; height: 65px;
-            background: var(--glass); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+        /* НИЖНЯЯ ПАНЕЛЬ */
+        .bottom-nav {
+            position: fixed; bottom: 25px; left: 50%; transform: translateX(-50%);
+            width: 85%; max-width: 320px; height: 65px;
+            background: rgba(255, 255, 255, 0.75); backdrop-filter: blur(25px); -webkit-backdrop-filter: blur(25px);
             border-radius: 35px; display: none; align-items: center; justify-content: space-around;
-            border: 1px solid var(--border); box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            border: 1px solid rgba(255,255,255,0.4); box-shadow: 0 8px 25px rgba(0,0,0,0.1);
         }
-        .nav-item { opacity: 0.3; transition: 0.3s; }
-        .nav-item.active { opacity: 1; transform: scale(1.1); }
-        .nav-item img { width: 28px; height: 28px; }
+        .nav-link { opacity: 0.3; transition: 0.2s; }
+        .nav-link.active { opacity: 1; transform: scale(1.1); }
+        .nav-link img { width: 26px; height: 26px; }
 
-        /* ПРОФИЛЬ: ИДЕАЛЬНО РОВНО */
-        #page-profile { 
-            display: none; flex-direction: column; align-items: center; 
-            justify-content: center; text-align: center; padding-top: 40px; 
-        }
-        .profile-avatar { 
-            width: 100px; height: 100px; border-radius: 50%; 
-            background: #eee; margin-bottom: 20px; object-fit: cover;
-        }
-        .profile-name { font-size: 24px; font-weight: 800; margin-bottom: 30px; }
-        .likes-box { display: flex; align-items: center; gap: 15px; }
-        .likes-box img { width: 40px; height: 40px; opacity: 0.2; }
-        .likes-count { font-size: 48px; font-weight: 300; color: #000; }
+        /* ПРОФИЛЬ (РОВНЫЙ) */
+        .page { display: none; width: 100%; }
+        .active-page { display: grid; }
+        
+        .profile-wrap { display: none; flex-direction: column; align-items: center; justify-content: center; padding-top: 60px; }
+        .profile-wrap img.avatar { width: 110px; height: 110px; border-radius: 50%; background: #eee; margin-bottom: 20px; }
+        .profile-wrap .name { font-size: 26px; font-weight: 800; text-transform: uppercase; margin-bottom: 30px; }
+        .likes-stat { display: flex; align-items: center; gap: 15px; }
+        .likes-stat img { width: 35px; height: 35px; opacity: 0.2; }
+        .likes-stat span { font-size: 50px; font-weight: 300; }
 
         /* ИЗБРАННОЕ */
-        #page-fav { display: none; }
-        .empty-msg { 
-            grid-column: 1/3; text-align: center; margin-top: 100px; 
-            font-weight: bold; font-size: 20px; 
-        }
-
-        .active-page { display: grid !important; }
-        .active-profile { display: flex !important; }
+        .empty-text { grid-column: 1/3; text-align: center; margin-top: 80px; font-size: 20px; font-weight: bold; }
     </style>
 </head>
 <body>
 
     <div class="header">
-        <div class="search-container">
-            <img src="https://img.icons8.com/ios-filled/50/000000/search--v1.png" alt="search">
-            <span class="search-text">поиск</span>
+        <div class="search-bar">
+            <img src="https://img.icons8.com/ios/50/000000/search--v1.png" alt="search">
+            <span>поиск</span>
         </div>
     </div>
 
-    <div class="content">
-        <div id="page-home" class="grid active-page"></div>
-
-        <div id="page-fav" class="grid">
-            <div class="empty-msg"><b>упс ваш список пуст</b></div>
+    <div class="scroll-area">
+        <div id="home" class="movie-grid page active-page"></div>
+        <div id="favs" class="movie-grid page">
+            <div class="empty-text"><b>упс ваш список пуст</b></div>
         </div>
-
-        <div id="page-profile">
-            <img id="user-pic" class="profile-avatar" src="https://www.w3schools.com/howto/img_avatar.png">
-            <div class="profile-name" id="user-name">ROMA</div>
-            <div class="likes-box">
+        <div id="profile" class="profile-wrap">
+            <img id="u-pic" class="avatar" src="https://www.w3schools.com/howto/img_avatar.png">
+            <div id="u-name" class="name">ROMA</div>
+            <div class="likes-stat">
                 <img src="https://img.icons8.com/ios-filled/50/000000/like--v1.png">
-                <div class="likes-count" id="count-num">0</div>
+                <span id="l-count">0</span>
             </div>
         </div>
     </div>
 
-    <button class="next-btn" id="btn-next" onclick="goNext()">Далее</button>
+    <button id="next-btn" class="next-button" onclick="unlockApp()">Далее</button>
 
-    <div class="nav" id="main-nav">
-        <div class="nav-item active" onclick="showPage('home', this)">
-            <img src="https://img.icons8.com/material-outlined/48/000000/home--v2.png">
-        </div>
-        <div class="nav-item" onclick="showPage('fav', this)">
-            <img src="https://img.icons8.com/material-outlined/48/000000/bookmark-ribbon--v1.png">
-        </div>
-        <div class="nav-item" onclick="showPage('profile', this)">
-            <img src="https://img.icons8.com/material-outlined/48/000000/user-male-circle.png">
-        </div>
+    <div id="navbar" class="bottom-nav">
+        <div class="nav-link active" onclick="tab('home', this)"><img src="https://img.icons8.com/material-outlined/48/000000/home--v2.png"></div>
+        <div class="nav-link" onclick="tab('favs', this)"><img src="https://img.icons8.com/material-outlined/48/000000/bookmark-ribbon--v1.png"></div>
+        <div class="nav-link" onclick="tab('profile', this)"><img src="https://img.icons8.com/material-outlined/48/000000/user-male-circle.png"></div>
     </div>
 
 <script>
     const tg = window.Telegram.WebApp;
-    const API_URL = "https://unrebuked-overinsistently-chasidy.ngrok-free.dev"; 
-    let movies = [];
-    let likedSet = new Set();
+    // ЗАМЕНИ НА СВОЙ NGROK
+    const API = "https://unrebuked-overinsistently-chasidy.ngrok-free.dev"; 
+    
+    let allMovies = [];
+    let likes = new Set();
 
-    async function loadData() {
-        // Данные юзера
+    async function init() {
         if (tg.initDataUnsafe?.user) {
-            document.getElementById('user-name').innerText = tg.initDataUnsafe.user.first_name.toUpperCase();
-            if (tg.initDataUnsafe.user.photo_url) document.getElementById('user-pic').src = tg.initDataUnsafe.user.photo_url;
+            document.getElementById('u-name').innerText = tg.initDataUnsafe.user.first_name.toUpperCase();
+            if (tg.initDataUnsafe.user.photo_url) document.getElementById('u-pic').src = tg.initDataUnsafe.user.photo_url;
         }
 
-        const res = await fetch(`${API_URL}/movies`, { headers: {'ngrok-skip-browser-warning': 'true'} });
-        movies = await res.json();
-        const home = document.getElementById('page-home');
+        try {
+            const r = await fetch(`${API}/movies`, { headers: {'ngrok-skip-browser-warning': 'true'} });
+            allMovies = await r.json();
+            render(allMovies, 'home');
+        } catch(e) { console.error("Ошибка сети"); }
+    }
 
-        movies.forEach(m => {
+    function render(list, containerId) {
+        const box = document.getElementById(containerId);
+        if (containerId === 'home') box.innerHTML = '';
+        list.forEach(m => {
             const card = document.createElement('div');
-            card.className = 'card';
+            card.className = 'movie-card';
             card.innerHTML = `
                 <img src="${m.poster_url}">
-                <div class="card-title">фильм</div>
-                <button class="card-btn btn-dislike" onclick="this.style.opacity=0.5">
-                    <img src="https://img.icons8.com/ios/50/000000/dislike.png">
-                </button>
-                <button class="card-btn btn-like" onclick="toggleLike(this, ${m.id})">
-                    <img src="https://img.icons8.com/ios-filled/50/000000/like--v1.png" style="tint-color: #ccc">
-                </button>
+                <div class="title">фильм</div>
+                <button class="btn-overlay btn-dislike" onclick="this.style.opacity=0.4"><img src="https://img.icons8.com/ios/50/000000/dislike.png"></button>
+                <button class="btn-overlay btn-heart" onclick="doLike(this, ${m.id})"><img src="https://img.icons8.com/ios-filled/50/000000/like--v1.png" style="opacity:0.2"></button>
             `;
-            home.appendChild(card);
+            box.appendChild(card);
         });
     }
 
-    function toggleLike(btn, id) {
+    function doLike(btn, id) {
         const img = btn.querySelector('img');
-        if (likedSet.has(id)) {
-            likedSet.delete(id);
-            img.style.filter = "grayscale(100%)";
-        } else {
-            likedSet.add(id);
+        if (likes.has(id)) {
+            likes.delete(id);
+            img.style.opacity = "0.2";
             img.style.filter = "none";
-            img.style.color = "red";
+        } else {
+            likes.add(id);
+            img.style.opacity = "1";
+            img.style.filter = "invert(15%) sepia(95%) saturate(6932%) hue-rotate(358deg) brightness(95%) contrast(112%)"; // Красный
         }
-        document.getElementById('count-num').innerText = likedSet.size;
-        tg.HapticFeedback.impactOccurred('light');
+        document.getElementById('l-count').innerText = likes.size;
+        tg.HapticFeedback.impactOccurred('medium');
     }
 
-    function goNext() {
-        document.getElementById('btn-next').style.display = 'none';
-        document.getElementById('main-nav').style.display = 'flex';
-        document.querySelectorAll('.btn-dislike').forEach(b => b.style.opacity = '1');
+    function unlockApp() {
+        document.getElementById('next-btn').style.display = 'none';
+        document.getElementById('navbar').style.display = 'flex';
+        document.querySelectorAll('.btn-dislike').forEach(b => b.style.opacity = "1");
     }
 
-    function showPage(pageId, el) {
-        document.querySelectorAll('.nav-item').forEach(i => i.classList.remove('active'));
+    function tab(id, el) {
+        document.querySelectorAll('.nav-link').forEach(n => n.classList.remove('active'));
         el.classList.add('active');
+        
+        document.getElementById('home').style.display = 'none';
+        document.getElementById('favs').style.display = 'none';
+        document.getElementById('profile').style.display = 'none';
 
-        document.getElementById('page-home').classList.remove('active-page');
-        document.getElementById('page-fav').classList.remove('active-page');
-        document.getElementById('page-profile').classList.remove('active-profile');
-
-        if (pageId === 'profile') {
-            document.getElementById('page-profile').classList.add('active-profile');
+        if (id === 'profile') {
+            document.getElementById('profile').style.display = 'flex';
         } else {
-            document.getElementById('page-' + pageId).classList.add('active-page');
+            document.getElementById(id).style.display = 'grid';
         }
 
-        if (pageId === 'fav') renderFavs();
-    }
-
-    function renderFavs() {
-        const favPage = document.getElementById('page-fav');
-        favPage.innerHTML = '';
-        const likedMovies = movies.filter(m => likedSet.has(m.id));
-
-        if (likedMovies.length === 0) {
-            favPage.innerHTML = '<div class="empty-msg"><b>упс ваш список пуст</b></div>';
-        } else {
-            likedMovies.forEach(m => {
-                const card = document.createElement('div');
-                card.className = 'card';
-                card.innerHTML = `<img src="${m.poster_url}"><div class="card-title">фильм</div>`;
-                favPage.appendChild(card);
-            });
+        if (id === 'favs') {
+            const fBox = document.getElementById('favs');
+            fBox.innerHTML = '';
+            const filtered = allMovies.filter(m => likes.has(m.id));
+            if (filtered.length === 0) fBox.innerHTML = '<div class="empty-text"><b>упс ваш список пуст</b></div>';
+            else render(filtered, 'favs');
         }
     }
 
-    loadData();
+    init();
     tg.expand();
 </script>
 </body>
