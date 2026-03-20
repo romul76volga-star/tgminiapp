@@ -3,169 +3,165 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>FilmsBot</title>
+    <title>Movie App</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <style>
         body {
-            margin: 0; padding: 0;
-            background-color: #1a1a1a;
-            font-family: -apple-system, sans-serif;
-            height: 100vh; overflow: hidden;
+            margin: 0; padding: 0; background-color: #1a1a1a;
+            font-family: -apple-system, sans-serif; height: 100vh; overflow: hidden;
         }
 
-        /* Белый лист на весь экран */
-        .app-shell {
-            background: white;
-            width: 100%; height: 100%;
-            display: flex; flex-direction: column;
-            position: relative;
-        }
+        /* Полноэкранный белый лист */
+        .app-shell { background: white; width: 100%; height: 100%; display: flex; flex-direction: column; position: relative; }
 
-        /* Поиск с эффектом стекла */
+        /* Шапка с эффектом стекла */
         .header {
-            padding: 15px;
-            position: sticky; top: 0; z-index: 10;
-            background: rgba(255, 255, 255, 0.8);
-            backdrop-filter: blur(10px); /* Эффект стекла */
+            padding: 10px 15px; position: sticky; top: 0; z-index: 10;
+            background: rgba(255, 255, 255, 0.75); backdrop-filter: blur(15px); -webkit-backdrop-filter: blur(15px);
+            border-bottom: 1px solid rgba(0,0,0,0.05);
         }
-        .search-box {
-            background: #f0f0f0; border-radius: 12px;
-            padding: 10px; color: #888;
-            display: flex; align-items: center; font-size: 15px;
-        }
+        .search-box { background: #f2f2f2; border-radius: 12px; padding: 10px 12px; color: #8e8e93; display: flex; align-items: center; font-size: 16px; }
+        .search-icon { width: 18px; height: 18px; margin-right: 8px; fill: #8e8e93; }
 
-        /* Контентная область */
-        .main-content {
-            flex: 1; overflow-y: auto;
-            padding: 10px 15px 100px 15px;
-        }
+        /* Контент */
+        .main-content { flex: 1; overflow-y: auto; padding: 15px 15px 110px 15px; }
+        .movie-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
 
-        .movie-grid {
-            display: grid; grid-template-columns: 1fr 1fr; gap: 15px;
-        }
-
-        /* Карточка в сером стиле */
+        /* Карточка */
         .movie-card {
-            background: #f9f9f9; border-radius: 20px;
-            position: relative; overflow: hidden;
-            display: flex; flex-direction: column;
+            background: #fff; border-radius: 20px; position: relative; overflow: hidden;
+            display: flex; flex-direction: column; box-shadow: 0 4px 12px rgba(0,0,0,0.05);
         }
-        .movie-card img {
-            width: 100%; height: 180px; object-fit: cover;
-            filter: grayscale(20%); /* Легкий серый оттенок картинок */
-        }
-        .movie-info { padding: 10px; text-align: center; color: #444; font-size: 14px; }
+        .movie-card img { width: 100%; height: 210px; object-fit: cover; background: #eee; }
+        .movie-info { padding: 12px; text-align: center; color: #333; font-size: 15px; font-weight: 500; }
 
-        /* Серые иконки */
-        .icon-btn {
-            position: absolute; top: 10px;
-            width: 28px; height: 28px;
-            background: rgba(255,255,255,0.9);
-            border-radius: 50%; display: flex;
-            align-items: center; justify-content: center;
-            color: #888; font-size: 18px; cursor: pointer;
+        /* Иконки на карточке */
+        .card-icon-btn {
+            position: absolute; top: 12px; width: 38px; height: 38px;
+            background: rgba(255,255,255,0.85); backdrop-filter: blur(5px);
+            border-radius: 50%; display: flex; align-items: center; justify-content: center;
+            cursor: pointer; transition: 0.2s; border: 1px solid rgba(0,0,0,0.05);
         }
-        .btn-heart { right: 10px; }
-        .btn-fav { right: 45px; display: none; } /* Скрыто до нажатия "Я готов" */
+        .card-icon-btn svg { width: 22px; height: 22px; fill: #b0b0b0; }
+
+        /* Позиции */
+        .btn-dislike { left: 12px; display: none; } /* Слева: Не нравится */
+        .btn-like { right: 12px; } /* Справа: Лайк */
         
-        .active-gray { color: #333 !important; font-weight: bold; }
+        /* Цвета при нажатии */
+        .liked svg { fill: #e74c3c !important; } /* КРАСНЫЙ ЛАЙК */
+        .disliked svg { fill: #333333 !important; } /* ТЕМНО-СЕРЫЙ ДИЗЛАЙК */
 
-        /* Нижняя панель навигации со стеклом */
+        /* Навигация */
         .nav-bar {
-            position: absolute; bottom: 0; width: 100%;
-            height: 70px; display: none;
-            justify-content: space-around; align-items: center;
-            background: rgba(248, 248, 248, 0.8);
-            backdrop-filter: blur(15px);
-            border-top: 1px solid #eee;
+            position: absolute; bottom: 0; width: 100%; height: 75px;
+            display: none; justify-content: space-around; align-items: center;
+            background: rgba(250, 250, 250, 0.8); backdrop-filter: blur(20px);
+            border-top: 1px solid rgba(0,0,0,0.05); z-index: 10;
         }
-        .nav-item { font-size: 24px; color: #aaa; cursor: pointer; }
-        .nav-active { color: #333; }
+        .nav-item { display: flex; flex-direction: column; align-items: center; width: 60px; cursor: pointer; }
+        .nav-item svg { width: 28px; height: 28px; fill: #b0b0b0; }
+        .nav-active svg { fill: #333 !important; }
 
-        /* Кнопка */
         .ready-btn {
-            position: fixed; bottom: 30px; left: 50%;
-            transform: translateX(-50%);
-            padding: 14px 50px; background: #333;
-            color: white; border: none; border-radius: 25px;
-            font-weight: bold; z-index: 100;
+            position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%);
+            padding: 16px 60px; background: #333; color: white; border: none;
+            border-radius: 30px; font-weight: bold; z-index: 100; box-shadow: 0 8px 20px rgba(0,0,0,0.2);
         }
 
-        /* Скрытые экраны */
-        .page { display: none; }
+        .page { display: none; width: 100%; }
         .page-active { display: grid; }
     </style>
 </head>
 <body>
 
-<div class="app-shell">
-    <div class="header">
-        <div class="search-box">🔍 поиск</div>
-    </div>
+<svg style="display: none;">
+    <symbol id="icon-search" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27A6.471 6.471 0 0 0 16 9.5 6.5 6.5 0 1 0 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/></symbol>
+    <symbol id="icon-heart" viewBox="0 0 24 24"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></symbol>
+    <symbol id="icon-dislike" viewBox="0 0 24 24"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z M2 2 L22 22" fill="none" stroke="#b0b0b0" stroke-width="2"/></symbol>
+    <symbol id="icon-home" viewBox="0 0 24 24"><path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/></symbol>
+    <symbol id="icon-profile" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 3c1.66 0 3 1.34 3 3s-1.34 3-3 3-3-1.34-3-3 1.34-3 3-3zm0 14.2c-2.5 0-4.71-1.28-6-3.22.03-1.99 4-3.08 6-3.08 1.99 0 5.97 1.09 6 3.08-1.29 1.94-3.5 3.22-6 3.22z"/></symbol>
+</svg>
 
+<div class="app-shell">
+    <div class="header"><div class="search-box"><svg class="search-icon"><use xlink:href="#icon-search"></use></svg>поиск</div></div>
     <div class="main-content">
         <div id="page-home" class="movie-grid page page-active"></div>
-        
-        <div id="page-fav" class="movie-grid page">
-            <div style="grid-column: 1/3; text-align: center; color: #999; margin-top: 50px;">Тут будут ваши закладки</div>
-        </div>
-
-        <div id="page-profile" class="page" style="text-align: center; padding-top: 50px; color: #444;">
-            <h3>Ваш профиль</h3>
-            <p>Настройки и статистика</p>
-        </div>
+        <div id="page-fav" class="movie-grid page"></div>
+        <div id="page-profile" class="page" style="text-align: center; padding-top: 60px;"><h3>Профиль</h3></div>
     </div>
 
     <button id="ready-btn" class="ready-btn" onclick="activateFullMode()">Я готов!</button>
 
     <div id="nav-bar" class="nav-bar">
-        <div class="nav-item nav-active" onclick="switchTab('home', this)">🏠</div>
-        <div class="nav-item" onclick="switchTab('fav', this)">🔖</div>
-        <div class="nav-item" onclick="switchTab('profile', this)">👤</div>
+        <div class="nav-item nav-active" onclick="switchTab('home', this)"><svg><use xlink:href="#icon-home"></use></svg></div>
+        <div class="nav-item" onclick="switchTab('fav', this)"><svg><use xlink:href="#icon-heart"></use></svg></div>
+        <div class="nav-item" onclick="switchTab('profile', this)"><svg><use xlink:href="#icon-profile"></use></svg></div>
     </div>
 </div>
 
 <script>
     const tg = window.Telegram.WebApp;
-    tg.expand();
-
-    // ЗАМЕНИ НА СВОЙ NGROK
     const API_URL = "https://unrebuked-overinsistently-chasidy.ngrok-free.dev"; 
+    let allMovies = [];
+    let likedIds = new Set();
 
     async function load() {
-        try {
-            const resp = await fetch(`${API_URL}/movies`, { headers: {'ngrok-skip-browser-warning': 'true'} });
-            const movies = await resp.json();
-            const grid = document.getElementById('page-home');
-            
-            movies.forEach(m => {
-                const card = document.createElement('div');
-                card.className = 'movie-card';
-                card.innerHTML = `
-                    <img src="${m.poster_url}">
-                    <div class="movie-info">фильм</div>
-                    <div class="icon-btn btn-heart" onclick="this.classList.toggle('active-gray')">❤</div>
-                    <div class="icon-btn btn-fav" onclick="this.classList.toggle('active-gray')">🔖</div>
-                `;
-                grid.appendChild(card);
-            });
-        } catch(e) {}
+        const resp = await fetch(`${API_URL}/movies`, { headers: {'ngrok-skip-browser-warning': 'true'} });
+        allMovies = await resp.json();
+        renderHome();
+    }
+
+    function renderHome() {
+        const grid = document.getElementById('page-home');
+        grid.innerHTML = '';
+        allMovies.forEach(m => {
+            const card = createCard(m);
+            grid.appendChild(card);
+        });
+    }
+
+    function createCard(m) {
+        const card = document.createElement('div');
+        card.className = 'movie-card';
+        card.innerHTML = `
+            <img src="${m.poster_url}">
+            <div class="movie-info">фильм</div>
+            <div class="card-icon-btn btn-dislike" onclick="handleRate(${m.id}, 'dislike', this)"><svg><use xlink:href="#icon-dislike"></use></svg></div>
+            <div class="card-icon-btn btn-like ${likedIds.has(m.id) ? 'liked' : ''}" onclick="handleRate(${m.id}, 'like', this)"><svg><use xlink:href="#icon-heart"></use></svg></div>
+        `;
+        return card;
+    }
+
+    async function handleRate(id, action, el) {
+        if (action === 'like') {
+            el.classList.toggle('liked');
+            if (el.classList.contains('liked')) likedIds.add(id);
+            else likedIds.delete(id);
+        } else {
+            el.classList.toggle('disliked');
+        }
+        fetch(`${API_URL}/rate`, { method: 'POST', body: JSON.stringify({ movie_id: id, action: action }) });
     }
 
     function activateFullMode() {
         document.getElementById('ready-btn').style.display = 'none';
         document.getElementById('nav-bar').style.display = 'flex';
-        document.querySelectorAll('.btn-fav').forEach(i => i.style.display = 'flex');
+        document.querySelectorAll('.btn-dislike').forEach(i => i.style.display = 'flex');
     }
 
     function switchTab(tabId, el) {
         document.querySelectorAll('.page').forEach(p => p.classList.remove('page-active'));
         document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('nav-active'));
-        
         document.getElementById('page-' + tabId).classList.add('page-active');
         el.classList.add('nav-active');
-    }
 
+        if (tabId === 'fav') {
+            const favGrid = document.getElementById('page-fav');
+            favGrid.innerHTML = '';
+            allMovies.filter(m => likedIds.has(m.id)).forEach(m => favGrid.appendChild(createCard(m)));
+        }
+    }
     load();
 </script>
 </body>
