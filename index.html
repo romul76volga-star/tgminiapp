@@ -6,103 +6,122 @@
     <title>FilmsBot</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <style>
-        /* Общие стили в стиле твоего макета */
         body {
             margin: 0; padding: 0;
-            background-color: #1a1a1a; /* Темный фон вокруг */
+            background-color: #1a1a1a;
             font-family: -apple-system, sans-serif;
-            display: flex; flex-direction: column; align-items: center;
             height: 100vh; overflow: hidden;
         }
 
-        /* Белое полотно приложения */
-        .app-container {
+        /* Белый лист на весь экран */
+        .app-shell {
             background: white;
-            width: 90%; max-width: 400px;
-            height: 85vh; margin-top: 20px;
-            border-radius: 30px;
-            display: flex; flex-direction: column;
-            position: relative; overflow: hidden;
-            box-shadow: 0 10px 25px rgba(0,0,0,0.5);
-        }
-
-        /* Поиск */
-        .search-container { padding: 15px; }
-        .search-box {
-            background: #f0f0f0; border-radius: 12px;
-            padding: 10px; color: #999;
-            display: flex; align-items: center; font-size: 14px;
-        }
-
-        /* Сетка фильмов */
-        .content {
-            flex: 1; overflow-y: auto;
-            padding: 0 15px 80px 15px;
-            display: grid; grid-template-columns: 1fr 1fr; gap: 15px;
-        }
-
-        .movie-card {
-            background: #fff; border-radius: 15px;
+            width: 100%; height: 100%;
             display: flex; flex-direction: column;
             position: relative;
         }
 
+        /* Поиск с эффектом стекла */
+        .header {
+            padding: 15px;
+            position: sticky; top: 0; z-index: 10;
+            background: rgba(255, 255, 255, 0.8);
+            backdrop-filter: blur(10px); /* Эффект стекла */
+        }
+        .search-box {
+            background: #f0f0f0; border-radius: 12px;
+            padding: 10px; color: #888;
+            display: flex; align-items: center; font-size: 15px;
+        }
+
+        /* Контентная область */
+        .main-content {
+            flex: 1; overflow-y: auto;
+            padding: 10px 15px 100px 15px;
+        }
+
+        .movie-grid {
+            display: grid; grid-template-columns: 1fr 1fr; gap: 15px;
+        }
+
+        /* Карточка в сером стиле */
+        .movie-card {
+            background: #f9f9f9; border-radius: 20px;
+            position: relative; overflow: hidden;
+            display: flex; flex-direction: column;
+        }
         .movie-card img {
-            width: 100%; height: 180px;
-            object-fit: cover; border-radius: 15px;
-            background: #eee;
+            width: 100%; height: 180px; object-fit: cover;
+            filter: grayscale(20%); /* Легкий серый оттенок картинок */
         }
+        .movie-info { padding: 10px; text-align: center; color: #444; font-size: 14px; }
 
-        .movie-title {
-            padding: 8px 0; font-size: 14px;
-            text-align: center; color: #333;
-        }
-
-        /* Иконки */
-        .icon {
+        /* Серые иконки */
+        .icon-btn {
             position: absolute; top: 10px;
-            width: 24px; height: 24px;
-            cursor: pointer; transition: 0.2s;
+            width: 28px; height: 28px;
+            background: rgba(255,255,255,0.9);
+            border-radius: 50%; display: flex;
+            align-items: center; justify-content: center;
+            color: #888; font-size: 18px; cursor: pointer;
         }
-        .icon-heart { right: 10px; color: #ccc; }
-        .icon-fav { right: 40px; color: #ccc; display: none; } /* Скрыто на 1 экране */
-        .active-heart { color: #ff4757 !important; }
-        .active-fav { color: #ffa502 !important; }
+        .btn-heart { right: 10px; }
+        .btn-fav { right: 45px; display: none; } /* Скрыто до нажатия "Я готов" */
+        
+        .active-gray { color: #333 !important; font-weight: bold; }
 
-        /* Нижняя панель */
+        /* Нижняя панель навигации со стеклом */
         .nav-bar {
             position: absolute; bottom: 0; width: 100%;
-            height: 60px; background: #f8f8f8;
-            display: none; /* Скрыто на 1 экране */
+            height: 70px; display: none;
             justify-content: space-around; align-items: center;
+            background: rgba(248, 248, 248, 0.8);
+            backdrop-filter: blur(15px);
             border-top: 1px solid #eee;
         }
+        .nav-item { font-size: 24px; color: #aaa; cursor: pointer; }
+        .nav-active { color: #333; }
 
+        /* Кнопка */
         .ready-btn {
-            position: absolute; bottom: 20px; left: 50%;
+            position: fixed; bottom: 30px; left: 50%;
             transform: translateX(-50%);
-            padding: 12px 30px; background: #333;
-            color: white; border: none; border-radius: 20px;
-            font-weight: bold; cursor: pointer; z-index: 10;
+            padding: 14px 50px; background: #333;
+            color: white; border: none; border-radius: 25px;
+            font-weight: bold; z-index: 100;
         }
+
+        /* Скрытые экраны */
+        .page { display: none; }
+        .page-active { display: grid; }
     </style>
 </head>
 <body>
 
-<div class="app-container">
-    <div class="search-container">
+<div class="app-shell">
+    <div class="header">
         <div class="search-box">🔍 поиск</div>
     </div>
 
-    <div id="movie-grid" class="content">
+    <div class="main-content">
+        <div id="page-home" class="movie-grid page page-active"></div>
+        
+        <div id="page-fav" class="movie-grid page">
+            <div style="grid-column: 1/3; text-align: center; color: #999; margin-top: 50px;">Тут будут ваши закладки</div>
         </div>
 
-    <button id="ready-btn" class="ready-btn" onclick="goToMain()">Я готов!</button>
+        <div id="page-profile" class="page" style="text-align: center; padding-top: 50px; color: #444;">
+            <h3>Ваш профиль</h3>
+            <p>Настройки и статистика</p>
+        </div>
+    </div>
+
+    <button id="ready-btn" class="ready-btn" onclick="activateFullMode()">Я готов!</button>
 
     <div id="nav-bar" class="nav-bar">
-        <span>🏠</span>
-        <span>🔖</span>
-        <span>👤</span>
+        <div class="nav-item nav-active" onclick="switchTab('home', this)">🏠</div>
+        <div class="nav-item" onclick="switchTab('fav', this)">🔖</div>
+        <div class="nav-item" onclick="switchTab('profile', this)">👤</div>
     </div>
 </div>
 
@@ -110,45 +129,44 @@
     const tg = window.Telegram.WebApp;
     tg.expand();
 
-    // ССЫЛКА НА ТВОЙ NGROK
+    // ЗАМЕНИ НА СВОЙ NGROK
     const API_URL = "https://unrebuked-overinsistently-chasidy.ngrok-free.dev"; 
 
-    async function loadMovies() {
+    async function load() {
         try {
-            const response = await fetch(`${API_URL}/movies`, {
-                headers: { 'ngrok-skip-browser-warning': 'true' }
-            });
-            const movies = await response.json();
-            const grid = document.getElementById('movie-grid');
+            const resp = await fetch(`${API_URL}/movies`, { headers: {'ngrok-skip-browser-warning': 'true'} });
+            const movies = await resp.json();
+            const grid = document.getElementById('page-home');
             
-            movies.forEach(movie => {
+            movies.forEach(m => {
                 const card = document.createElement('div');
                 card.className = 'movie-card';
                 card.innerHTML = `
-                    <img src="${movie.poster_url}">
-                    <div class="movie-title">${movie.title}</div>
-                    <div class="icon icon-heart" onclick="toggleLike(this)">❤</div>
-                    <div class="icon icon-fav" onclick="toggleFav(this)">🔖</div>
+                    <img src="${m.poster_url}">
+                    <div class="movie-info">фильм</div>
+                    <div class="icon-btn btn-heart" onclick="this.classList.toggle('active-gray')">❤</div>
+                    <div class="icon-btn btn-fav" onclick="this.classList.toggle('active-gray')">🔖</div>
                 `;
                 grid.appendChild(card);
             });
-        } catch (e) { console.error("Ошибка загрузки"); }
+        } catch(e) {}
     }
 
-    function toggleLike(el) { el.classList.toggle('active-heart'); }
-    function toggleFav(el) { el.classList.toggle('active-fav'); }
-
-    function goToMain() {
-        // Скрываем кнопку, показываем навигацию и вторую иконку
+    function activateFullMode() {
         document.getElementById('ready-btn').style.display = 'none';
         document.getElementById('nav-bar').style.display = 'flex';
-        
-        const favIcons = document.querySelectorAll('.icon-fav');
-        favIcons.forEach(icon => icon.style.display = 'block');
+        document.querySelectorAll('.btn-fav').forEach(i => i.style.display = 'flex');
     }
 
-    loadMovies();
-</script>
+    function switchTab(tabId, el) {
+        document.querySelectorAll('.page').forEach(p => p.classList.remove('page-active'));
+        document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('nav-active'));
+        
+        document.getElementById('page-' + tabId).classList.add('page-active');
+        el.classList.add('nav-active');
+    }
 
+    load();
+</script>
 </body>
 </html>
