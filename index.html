@@ -6,14 +6,6 @@
     <title>FilmsBot iOS Style</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <style>
-        :root {
-            --ios-gray: #f2f2f7;
-            --ios-text: #000000;
-            --ios-hint: #8e8e93;
-            --ios-active: #000000;
-            --ios-inactive: #c7c7cc;
-        }
-
         body {
             margin: 0; padding: 0;
             background-color: #1a1a1a;
@@ -31,7 +23,7 @@
             transition: opacity 0.3s ease;
         }
 
-        /* Шапка со стеклом */
+        /* Шапка */
         .header {
             padding: 10px 15px;
             position: sticky; top: 0; z-index: 10;
@@ -56,7 +48,7 @@
             display: grid; grid-template-columns: 1fr 1fr; gap: 15px;
         }
 
-        /* Карточка */
+        /* Карточка: РАЗМЕР ПОСТЕРА НЕ МЕНЯЕМ */
         .movie-card {
             background: #fff; border-radius: 18px;
             position: relative; overflow: hidden;
@@ -64,112 +56,139 @@
             box-shadow: 0 2px 8px rgba(0,0,0,0.04);
         }
         .movie-card img { width: 100%; height: 210px; object-fit: cover; background: #eee; }
-        .movie-info { padding: 10px; text-align: center; color: #333; font-size: 14px; font-weight: 500; }
+        
+        /* !!! НАЗВАНИЕ ФИЛЬМА ЖИРНЫМ И СНИЗУ !!! */
+        .movie-info { 
+            padding: 12px; text-align: center; color: #000; 
+            font-size: 15px; font-weight: 700; /* Жирный шрифт */
+            border-top: 1px solid #eee;
+        }
 
         /* Крупные серые иконки */
         .card-icon-btn {
             position: absolute; top: 12px;
             width: 38px; height: 38px;
             background: rgba(255,255,255,0.8);
-            backdrop-filter: blur(5px); -webkit-backdrop-filter: blur(5px);
+            backdrop-filter: blur(5px);
             border-radius: 50%; display: flex;
             align-items: center; justify-content: center;
             cursor: pointer; transition: 0.2s;
             border: 1px solid rgba(0,0,0,0.05);
         }
-        
-        /* Крупные SVG */
         .card-icon-btn svg { width: 22px; height: 22px; fill: #b0b0b0; transition: 0.2s; }
         .btn-fav { left: 12px; display: none; } /* Закладка слева */
         .btn-heart { right: 12px; } /* Сердце справа */
-        
-        /* Активные состояния */
         .icon-active svg { fill: #333333 !important; }
 
         /* --- НИЖНЯЯ ПАНЕЛЬ С ПУЗЫРЬКОМ (iOS стиль) --- */
         .nav-wrapper {
             position: absolute; bottom: 20px; left: 50%;
             transform: translateX(-50%);
-            width: 280px; height: 60px;
-            background: rgba(240, 240, 240, 0.8);
+            width: 290px; height: 65px;
+            background: rgba(240, 240, 240, 0.7);
             backdrop-filter: blur(15px); -webkit-backdrop-filter: blur(15px);
-            border-radius: 30px;
+            border-radius: 35px;
             display: none; /* Скрыто изначально */
             justify-content: space-around; align-items: center;
             border: 1px solid rgba(0,0,0,0.05);
             z-index: 10;
         }
 
-        /* Тот самый прозрачный пузырёк */
+        /* !!! ТОТ САМЫЙ КРУПНЫЙ ПРОЗРАЧНЫЙ ПУЗЫРЁК !!! */
         .nav-bubble {
             position: absolute;
-            width: 80px; height: 45px;
-            background: rgba(255, 255, 255, 0.9);
+            width: 90px; height: 50px; /* Крупнее */
+            background: rgba(255, 255, 255, 0.5); /* Более прозрачный */
+            backdrop-filter: blur(10px); /* Матовое стекло внутри */
             border-radius: 25px;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+            box-shadow: 0 4px 10px rgba(0,0,0,0.08);
             transition: transform 0.3s ease;
             z-index: 1;
-            left: 10px; /* Изначальная позиция */
+            left: 5px; /* Изначальная позиция */
         }
         
         .nav-item {
             display: flex; flex-direction: column; align-items: center;
-            justify-content: center; width: 80px; height: 100%;
+            justify-content: center; width: 90px; height: 100%;
             cursor: pointer; z-index: 2; /* Поверх пузырька */
         }
-        
-        /* Крупные SVG в навигации */
-        .nav-item svg { width: 26px; height: 26px; fill: #b0b0b0; transition: 0.2s; }
-        
-        /* Активная вкладка */
+        .nav-item svg { width: 28px; height: 28px; fill: #b0b0b0; transition: 0.2s; }
         .nav-active svg { fill: #333333 !important; }
 
-        /* !!! КНОПКА "ДАЛЕЕ" В УГЛУ (СТЕКЛО) !!! */
+        /* !!! УНИВЕРСАЛЬНАЯ КНОПКА "ДАЛЕЕ" (УГОЛ + СТЕКЛО) !!! */
         .ready-btn {
             position: fixed;
-            bottom: 25px; /* Чуть выше панели */
-            right: 20px; /* В правом углу */
-            padding: 12px 25px;
-            background: rgba(50, 50, 50, 0.5); /* Прозрачный черный */
-            backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
-            color: white;
-            border: 1px solid rgba(255,255,255,0.1);
-            border-radius: 18px;
-            font-weight: 600; font-size: 15px;
+            bottom: 3vh; /* Адаптивный отступ */
+            right: 4vw; /* Адаптивный отступ */
+            padding: 14px 30px;
+            /* РАЗМЕР КНОПКИ: vw/vh для адаптации */
+            width: auto; max-width: 150px; 
+            background: rgba(255, 255, 255, 0.3); /* Очень прозрачный */
+            backdrop-filter: blur(15px); -webkit-backdrop-filter: blur(15px);
+            color: #333;
+            border: 1px solid rgba(0,0,0,0.08);
+            border-radius: 20px;
+            font-weight: 700; font-size: 16px;
             z-index: 100;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
             transition: 0.2s;
         }
         .ready-btn:active { transform: scale(0.96); opacity: 0.8; }
 
+        /* --- ЭКРАН ПРОФИЛЯ (iOS Стиль) --- */
+        .profile-page {
+            display: none; flex-direction: column; align-items: center;
+            padding: 30px 20px; text-align: center; color: #000;
+        }
+        
+        /* Заголовок "профиль" */
+        .profile-header {
+            align-self: flex-start; font-size: 28px; font-weight: 800;
+            margin-bottom: 30px; margin-left: 10px;
+        }
+
+        /* Блок юзера */
+        .user-block {
+            display: flex; align-items: center; width: 100%;
+            background: #f9f9f9; border-radius: 20px; padding: 15px;
+            border: 1px solid #eee; margin-bottom: 25px;
+        }
+        .user-avatar {
+            width: 70px; height: 70px; border-radius: 50%;
+            background: #e0e0e0; margin-right: 20px;
+            object-fit: cover; /* Для реальной аватарки */
+        }
+        .user-name { font-size: 22px; font-weight: 700; color: #000; }
+
+        /* !!! БЛОК КОЛИЧЕСТВА ЛАЙКОВ (Цифра + Сердце) !!! */
+        .stats-block {
+            display: flex; align-items: center; align-self: flex-start;
+            margin-left: 15px; margin-top: 10px;
+        }
+        .stats-icon svg { width: 35px; height: 35px; fill: #e0e0e0; margin-right: 15px; }
+        .stats-count { font-size: 48px; font-weight: 400; color: #000; } /* Цифра как на макете */
+
         /* Экраны */
         .page { display: none; width: 100%; height: 100%; }
         .page-active { display: grid; }
+        .profile-active { display: flex; } /* Специфично для профиля */
         
-        /* !!! ТЕКСТ "СПИСОК ПУСТ" (ЖИРНЫЙ) !!! */
+        /* Заглушка для вкладок */
         .placeholder-page {
             grid-column: 1/3; text-align: center;
             padding-top: 100px; display: flex; flex-direction: column; align-items: center;
         }
-        .placeholder-page h2 {
-            font-size: 20px; font-weight: 700; color: #333; margin-bottom: 10px;
-        }
-        .placeholder-page p { color: #888; font-size: 15px; margin-top: 0; }
         .placeholder-page svg { width: 64px; height: 64px; fill: #d0d0d0; margin-bottom: 20px; }
 
-        /* --- ЭКРАН ЗАГРУЗКИ (ПЕРЕХОД) --- */
+        /* Загрузка */
         .loader-screen {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: white; z-index: 200;
-            display: none; /* Скрыт */
+            background: white; z-index: 200; display: none;
             flex-direction: column; align-items: center; justify-content: center;
         }
         .spinner {
-            width: 40px; height: 40px;
-            border: 4px solid #f3f3f3; border-top: 4px solid #333;
-            border-radius: 50%;
-            animation: spin 1s linear infinite;
-            margin-bottom: 15px;
+            width: 40px; height: 40px; border: 4px solid #f3f3f3; border-top: 4px solid #333;
+            border-radius: 50%; animation: spin 1s linear infinite; margin-bottom: 15px;
         }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
     </style>
@@ -186,7 +205,6 @@
 
 <div id="loader-screen" class="loader-screen">
     <div class="spinner"></div>
-    <div style="color: #666; font-size: 14px;">Загрузка главного экрана...</div>
 </div>
 
 <div class="app-shell" id="app-shell">
@@ -201,19 +219,21 @@
         <div id="page-home" class="movie-grid page page-active"></div>
         
         <div id="page-fav" class="movie-grid page">
-            <div id="fav-placeholder" class="placeholder-page">
-                <svg><use xlink:href="#icon-bookmark"></use></svg>
-                <h2>Упс! Список пуст.</h2>
-                <p>Лайкните фильмы на главной, чтобы они появились здесь.</p>
-            </div>
+            <div style="grid-column: 1/3; text-align: center; color: #999; margin-top: 50px;">Тут будут ваши закладки</div>
         </div>
         
-        <div id="page-profile" class="page" style="text-align: center; padding-top: 60px;">
-            <div class="placeholder-page" style="grid-column: auto; padding-top: 0;">
-                <svg><use xlink:href="#icon-profile"></use></svg>
+        <div id="page-profile" class="page profile-page">
+            <div class="profile-header">профиль</div>
+            
+            <div class="user-block">
+                <img id="user-avatar" class="user-avatar" src="" alt="Avatar">
+                <div id="user-name" class="user-name">НИК</div>
             </div>
-            <h3>Ваш профиль</h3>
-            <p style="color: #888;">Настройки и статистика появятся позже</p>
+            
+            <div class="stats-block">
+                <div class="stats-icon"><svg><use xlink:href="#icon-heart"></use></svg></div>
+                <div id="liked-count" class="stats-count">0</div>
+            </div>
         </div>
     </div>
 
@@ -244,6 +264,18 @@
 
     async function load() {
         try {
+            // !!! ЗАГРУЖАЕМ ДАННЫЕ ПРОФИЛЯ TELEGRAM !!!
+            if (tg.initDataUnsafe && tg.initDataUnsafe.user) {
+                const user = tg.initDataUnsafe.user;
+                document.getElementById('user-name').innerText = user.first_name + (user.last_name ? ' ' + user.last_name : '');
+                if (user.photo_url) {
+                    document.getElementById('user-avatar').src = user.photo_url;
+                } else {
+                    // Дефолтная серая аватарка, если нет фото
+                    document.getElementById('user-avatar').style.background = '#e0e0e0';
+                }
+            }
+
             const resp = await fetch(`${API_URL}/movies`, { headers: {'ngrok-skip-browser-warning': 'true'} });
             allMovies = await resp.json();
             const grid = document.getElementById('page-home');
@@ -253,11 +285,11 @@
                 card.className = 'movie-card';
                 card.innerHTML = `
                     <img src="${m.poster_url}" alt="${m.title}">
-                    <div class="movie-info">фильм</div>
+                    <div class="movie-info">${m.title}</div>
                     <div class="card-icon-btn btn-fav icon-btn-faved" onclick="this.classList.toggle('icon-active')">
                         <svg><use xlink:href="#icon-bookmark"></use></svg>
                     </div>
-                    <div class="card-icon-btn btn-heart icon-btn-liked" onclick="this.classList.toggle('icon-active'); toggleLike(${m.id})">
+                    <div class="card-icon-btn btn-heart icon-btn-liked" onclick="this.classList.toggle('icon-active'); updateLikes(${m.id})">
                         <svg><use xlink:href="#icon-heart"></use></svg>
                     </div>
                 `;
@@ -266,84 +298,54 @@
         } catch(e) {}
     }
 
-    // Логика добавления в лайкнутые
-    function toggleLike(id) {
+    // Логика лайков и ОБНОВЛЕНИЯ СЧЁТЧИКА В ПРОФИЛЕ
+    function updateLikes(id) {
         if (likedIds.has(id)) {
             likedIds.delete(id);
         } else {
             likedIds.add(id);
         }
+        // !!! ОБНОВЛЯЕМ ЦИФРУ В ПРОФИЛЕ !!!
+        document.getElementById('liked-count').innerText = likedIds.size;
     }
 
-    // --- ПЕРЕХОД С ЗАГРУЗКОЙ ---
+    // Переход с загрузкой
     function activateFullModeWithLoader() {
-        // Показываем экран загрузки
         document.getElementById('loader-screen').style.display = 'flex';
         document.getElementById('app-shell').style.opacity = '0';
 
-        // Через 1.5 секунды переключаем
         setTimeout(() => {
             document.getElementById('loader-screen').style.display = 'none';
             document.getElementById('app-shell').style.opacity = '1';
             
             document.getElementById('ready-btn').style.display = 'none';
             document.getElementById('nav-wrapper').style.display = 'flex';
-            // Показываем закладки на карточках
             document.querySelectorAll('.btn-fav').forEach(i => i.style.display = 'flex');
         }, 1500);
     }
 
     // Логика переключения вкладок и перемещения пузырька
     function switchTab(tabId, el, index) {
-        document.querySelectorAll('.page').forEach(p => p.classList.remove('page-active'));
+        document.querySelectorAll('.page').forEach(p => p.classList.remove('page-active', 'profile-active'));
         document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('nav-active'));
         
-        document.getElementById('page-' + tabId).classList.add('page-active');
+        const targetPage = document.getElementById('page-' + tabId);
+        
+        // Специфично для профиля, т.к. он флекс
+        if (tabId === 'profile') {
+            targetPage.classList.add('profile-active');
+        } else {
+            targetPage.classList.add('page-active');
+        }
+        
         el.classList.add('nav-active');
         
-        // !!! ПЕРЕМЕЩАЕМ ПУЗЫРЁК !!!
+        // !!! ПЕРЕМЕЩАЕМ КРУПНЫЙ ПУЗЫРЁК !!!
         const bubble = document.getElementById('nav-bubble');
-        // Рассчитываем позицию (10px отступ + ширина вкладки * индекс)
-        const newLeft = 10 + (90 * index); 
-        bubble.style.transform = `translateX(${index * 90}px)`;
+        bubble.style.transform = `translateX(${index * 95}px)`; // Шаг перемещения
 
         // Вибрация Telegram
         if (tg.HapticFeedback) tg.HapticFeedback.impactOccurred('light');
-
-        // Специальная логика для вкладки "Лайкнутые"
-        if (tabId === 'fav') {
-            const favGrid = document.getElementById('page-fav');
-            const placeholder = document.getElementById('fav-placeholder');
-            
-            // Очищаем старые карточки, но оставляем плейсхолдер
-            const cards = favGrid.querySelectorAll('.movie-card');
-            cards.forEach(card => card.remove());
-
-            // Фильтруем фильмы
-            const likedMovies = allMovies.filter(m => likedIds.has(m.id));
-            
-            if (likedMovies.length === 0) {
-                placeholder.style.display = 'flex'; // Показываем текст "Пуст"
-            } else {
-                placeholder.style.display = 'none'; // Скрываем текст
-                // Отрисовываем лайкнутые
-                likedMovies.forEach(m => {
-                    const card = document.createElement('div');
-                    card.className = 'movie-card';
-                    card.innerHTML = `
-                        <img src="${m.poster_url}" alt="${m.title}">
-                        <div class="movie-info">фильм</div>
-                        <div class="card-icon-btn btn-fav icon-active" style="display:flex;">
-                            <svg><use xlink:href="#icon-bookmark"></use></svg>
-                        </div>
-                        <div class="card-icon-btn btn-heart icon-active">
-                            <svg><use xlink:href="#icon-heart"></use></svg>
-                        </div>
-                    `;
-                    favGrid.appendChild(card);
-                });
-            }
-        }
     }
 
     load();
