@@ -2,85 +2,382 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>FilmsBot AI</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <style>
-        body { margin: 0; background: #fff; font-family: sans-serif; padding-bottom: 100px; }
-        .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; padding: 10px; }
-        .card { background: #f9f9f9; border-radius: 15px; overflow: hidden; position: relative; height: 260px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
-        .card img { width: 100%; height: 100%; object-fit: cover; }
-        .title { position: absolute; bottom: 0; width: 100%; background: rgba(0,0,0,0.7); color: #fff; font-size: 12px; padding: 8px; text-align: center; }
-        .btn { position: absolute; top: 10px; width: 35px; height: 35px; border-radius: 50%; border: none; background: #fff; cursor: pointer; font-size: 18px; display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 5px rgba(0,0,0,0.2); }
-        .btn-like { right: 10px; color: #ff3b30; }
-        .btn-dislike { left: 10px; color: #333; }
-        .active-like { background: #ff3b30 !important; color: #fff !important; }
+        :root {
+            --bg-color: #f5f5f7;
+            --card-bg: #ffffff;
+            --text-color: #000000;
+            --accent-red: #ff3b30;
+            --nav-bg: rgba(255, 255, 255, 0.85);
+        }
+
+        body { 
+            margin: 0; 
+            padding: 0; 
+            background-color: var(--bg-color); 
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; 
+            color: var(--text-color);
+            height: 100vh;
+            overflow: hidden;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        /* --- UI elements --- */
+        .safe-area {
+            padding-top: constant(safe-area-inset-top);
+            padding-top: env(safe-area-inset-top);
+        }
+
+        /* Header */
+        .header {
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            background-color: rgba(255, 255, 255, 0.7);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            padding: 12px 16px;
+            border-bottom: 0.5px solid rgba(0, 0, 0, 0.1);
+        }
+        .search-bar {
+            background-color: rgba(0, 0, 0, 0.05);
+            border-radius: 14px;
+            padding: 10px 12px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .search-bar svg {
+            width: 18px;
+            height: 18px;
+            fill: #8e8e93;
+        }
+        .search-bar span {
+            color: #8e8e93;
+            font-size: 17px;
+            letter-spacing: -0.4px;
+        }
+
+        /* Content Area */
+        .content-area {
+            height: calc(100vh - 70px);
+            overflow-y: auto;
+            -webkit-overflow-scrolling: touch;
+            padding-bottom: 120px;
+        }
+
+        /* Movie Grid */
+        .movie-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 16px;
+            padding: 16px;
+        }
+
+        /* --- Movie Card --- */
+        .movie-card {
+            background-color: var(--card-bg);
+            border-radius: 20px;
+            overflow: hidden;
+            position: relative;
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.06);
+            transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        
+        .movie-card:active {
+            transform: scale(0.98);
+        }
+
+        .poster-container {
+            width: 100%;
+            height: 250px;
+            background-color: #eee;
+            position: relative;
+        }
+        .poster-container img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .movie-info {
+            padding: 12px 10px;
+            text-align: center;
+        }
+        .movie-title {
+            font-size: 15px;
+            font-weight: 600;
+            letter-spacing: -0.3px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        /* --- Buttons --- */
+        .action-btn {
+            position: absolute;
+            top: 12px;
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            border: none;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            z-index: 10;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.15);
+            transition: transform 0.1s;
+        }
+        .action-btn:active {
+            transform: scale(1.1);
+        }
+        
+        /* Крестик */
+        .btn-dislike {
+            left: 12px;
+            background-color: rgba(255, 255, 255, 0.95);
+        }
+        .btn-dislike svg {
+            width: 20px;
+            height: 20px;
+            stroke: #333; /* Цвет крестика */
+            stroke-width: 2.5;
+            stroke-linecap: round;
+        }
+
+        /* Сердечко */
+        .btn-like {
+            right: 12px;
+            background-color: rgba(255, 255, 255, 0.95);
+        }
+        .btn-like svg {
+            width: 22px;
+            height: 22px;
+            fill: none;
+            stroke: #b0b0b0; /* Цвет неактивного сердечка */
+            stroke-width: 2;
+        }
+        
+        /* Состояние лайка */
+        .is-liked {
+            background-color: var(--accent-red);
+        }
+        .is-liked svg {
+            fill: #ffffff; /* Белое залитое сердечко */
+            stroke: #ffffff;
+        }
+
+        /* --- Bottom Navigation --- */
+        .bottom-nav {
+            position: fixed;
+            bottom: 25px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 85%;
+            max-width: 340px;
+            height: 70px;
+            background-color: var(--nav-bg);
+            backdrop-filter: blur(25px);
+            -webkit-backdrop-filter: blur(25px);
+            border-radius: 35px;
+            display: flex;
+            align-items: center;
+            justify-content: space-around;
+            border: 0.5px solid rgba(0, 0, 0, 0.05);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.12);
+            z-index: 1000;
+            padding: 0 10px;
+        }
+        .nav-link {
+            opacity: 0.3;
+            transition: 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+            padding: 10px;
+            border-radius: 20px;
+        }
+        .nav-link.active {
+            opacity: 1;
+            transform: translateY(-2px);
+        }
+        .nav-link svg {
+            width: 30px;
+            height: 30px;
+            fill: #000;
+        }
+
+        /* --- Pages --- */
+        .page { display: none; }
+        .active-page { display: grid !important; }
+        
+        .empty-msg {
+            grid-column: 1 / -1;
+            text-align: center;
+            padding: 60px 20px;
+            color: #8e8e93;
+            font-size: 17px;
+        }
+
     </style>
 </head>
-<body>
-    <div id="movie-grid" class="grid"></div>
+<body class="safe-area">
+    
+    <div class="header">
+        <div class="search-bar">
+            <svg viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27A6.471 6.471 0 0 0 16 9.5 6.5 6.5 0 1 0 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"></path></svg>
+            <span>поиск</span>
+        </div>
+    </div>
+
+    <div class="content-area">
+        <div id="page-home" class="movie-grid page active-page"></div>
+        
+        <div id="page-favs" class="movie-grid page"></div>
+        
+        <div id="page-profile" class="page" style="text-align:center; padding-top:60px;">
+            <h3>Профиль</h3>
+            <p>Фильмов в избранном: <strong id="fav-count">0</strong></p>
+        </div>
+    </div>
+
+    <div class="bottom-nav">
+        <div class="nav-link active" onclick="tab('page-home', this)">
+            <svg viewBox="0 0 24 24"><path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"></path></svg>
+        </div>
+        <div class="nav-link" onclick="tab('page-favs', this)">
+            <svg viewBox="0 0 24 24"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"></path></svg>
+        </div>
+        <div class="nav-link" onclick="tab('page-profile', this)">
+            <svg viewBox="0 0 24 24"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"></path></svg>
+        </div>
+    </div>
 
     <script>
         const tg = window.Telegram.WebApp;
-        // !!! ЗАМЕНИ ЭТУ ССЫЛКУ ПОСЛЕ ПЕРЕЗАПУСКА NGROK !!!
+        
+        // !!! ТВОЯ ССЫЛКА NGROK (без лишних пробелов) !!!
         const API = "https://unrebuked-overinsistently-chasidy.ngrok-free.dev"; 
 
+        let allMovies = [];
         let likes = new Set();
         let dislikes = new Set();
 
         async function loadMovies() {
-            const isAI = likes.size > 0 || dislikes.size > 0;
-            const url = isAI ? `${API}/recommend` : `${API}/movies`;
+            // Если есть лайки или дизлайки -> идем в /recommend (ПОСТ), иначе в /movies (ГЕТ)
+            const isRec = likes.size > 0 || dislikes.size > 0;
+            const url = isRec ? `${API}/recommend` : `${API}/movies`;
             
             try {
                 const response = await fetch(url, {
-                    method: isAI ? 'POST' : 'GET',
+                    method: isRec ? 'POST' : 'GET',
                     headers: { 'Content-Type': 'application/json', 'ngrok-skip-browser-warning': 'true' },
-                    body: isAI ? JSON.stringify({ liked_movies: Array.from(likes), disliked_movies: Array.from(dislikes) }) : null
+                    body: isRec ? JSON.stringify({ liked_movies: Array.from(likes), disliked_movies: Array.from(dislikes) }) : null
                 });
-                const data = await response.json();
-                render(data);
-            } catch (e) {
-                document.getElementById('movie-grid').innerHTML = "<p style='padding:20px;'>Ошибка связи с сервером. Проверь ngrok и нажми 'Visit Site' в браузере.</p>";
-            }
+                allMovies = await response.json();
+                renderMainGrid();
+            } catch (e) { console.error("Fetch error:", e); }
         }
 
-        function render(movies) {
-            const container = document.getElementById('movie-grid');
+        function renderMainGrid() {
+            const container = document.getElementById('page-home');
             container.innerHTML = '';
-            movies.forEach(m => {
+            
+            if (!allMovies || allMovies.length === 0) {
+                container.innerHTML = '<div class="empty-msg">Фильмов пока нет. Попробуй обновить позже.</div>';
+                return;
+            }
+
+            allMovies.forEach(m => {
                 const card = document.createElement('div');
-                card.className = 'card';
+                card.className = 'movie-card';
                 card.innerHTML = `
-                    <img src="${m.poster_url}" onerror="this.src='https://via.placeholder.com/200x300?text=No+Poster'">
-                    <div class="title">${m.title}</div>
-                    <button class="btn btn-dislike" onclick="press(${m.id}, 'dislike')">✕</button>
-                    <button class="btn btn-like ${likes.has(m.id) ? 'active-like' : ''}" onclick="press(${m.id}, 'like')">❤</button>
+                    <div class="poster-container">
+                        <button class="action-btn btn-dislike" onclick="press(${m.id}, 'dislike')">
+                            <svg viewBox="0 0 24 24"><path d="M18 6L6 18M6 6l12 12"/></svg>
+                        </button>
+                        <button class="action-btn btn-like ${likes.has(m.id)?'is-liked':''}" onclick="press(${m.id}, 'like')">
+                            <svg viewBox="0 0 24 24"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"></path></svg>
+                        </button>
+                        <img src="${m.poster_url || ''}" onerror="this.src='https://via.placeholder.com/200x300?text=No+Poster'">
+                    </div>
+                    <div class="movie-info">
+                        <div class="movie-title">${m.title || 'Без названия'}</div>
+                    </div>
                 `;
                 container.appendChild(card);
             });
+            document.getElementById('fav-count').innerText = likes.size;
         }
 
         async function press(id, type) {
+            // Вибрация
+            tg.HapticFeedback.impactOccurred('light');
+
             if (type === 'like') {
-                if(likes.has(id)) likes.delete(id); else { likes.add(id); dislikes.delete(id); }
+                if(likes.has(id)) {
+                    likes.delete(id); 
+                } else {
+                    likes.add(id); dislikes.delete(id); 
+                }
             } else {
-                if(dislikes.has(id)) dislikes.delete(id); else { dislikes.add(id); likes.delete(id); }
+                // Если дизлайк -> сразу убираем из лайков и добавляем в дизлайки
+                dislikes.add(id); likes.delete(id);
             }
             
-            // Сохраняем в БД (тихо)
+            // Сохраняем в БД на сервере (тихо, не ждем)
             fetch(`${API}/rate`, {
                 method: 'POST',
                 headers: {'Content-Type': 'application/json'},
                 body: JSON.stringify({ movie_id: id, action: type })
             });
 
-            tg.HapticFeedback.impactOccurred('medium');
-            loadMovies();
+            // Обновляем список, чтобы ИИ пересчитал реки
+            loadMovies(); 
         }
 
-        loadMovies();
+        function tab(id, el) {
+            // Переключение вкладок в навигации
+            document.querySelectorAll('.nav-link').forEach(n => n.classList.remove('active'));
+            el.classList.add('active');
+            
+            // Переключение страниц
+            document.querySelectorAll('.page').forEach(p => p.classList.remove('active-page'));
+            document.getElementById(id).classList.add('active-page');
+
+            // Отрисовка страницы "Избранное"
+            if(id === 'page-favs') {
+                const fBox = document.getElementById('page-favs');
+                fBox.innerHTML = '';
+                const favs = allMovies.filter(m => likes.has(m.id));
+                
+                if(!favs.length) {
+                    fBox.innerHTML = '<div class="empty-msg">В избранном пусто.<br>Лайкай фильмы на главной!</div>';
+                } else {
+                    favs.forEach(m => {
+                        const card = document.createElement('div');
+                        card.className = 'movie-card';
+                        card.innerHTML = `
+                            <div class="poster-container">
+                                <img src="${m.poster_url || ''}" onerror="this.src='https://via.placeholder.com/200x300?text=No+Poster'">
+                            </div>
+                            <div class="movie-info">
+                                <div class="movie-title">${m.title || 'Без названия'}</div>
+                            </div>
+                        `;
+                        fBox.appendChild(card);
+                    });
+                }
+            }
+        }
+
+        // --- Start up ---
+        tg.ready();
         tg.expand();
+        // Ngrok костыль: если открыто в Telegram Mini App, не показываем warning ngrok
+        // Это делается через headers в loadMovies
+        loadMovies();
     </script>
 </body>
 </html>
