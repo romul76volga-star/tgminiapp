@@ -1,134 +1,267 @@
-<script>
-    const tg = window.Telegram.WebApp;
-    // ЗАМЕНИ НА СВОЮ ССЫЛКУ NGROK
-   const API = "https://unrebuked-overinsistently-chasidy.ngrok-free.dev";; 
-    
-    let allMovies = [];
-    let likes = new Set();
-    let dislikes = new Set();
-    let isUnlocked = false;
-
-    async function init() {
-        tg.ready();
-        tg.expand();
-        
-        if (tg.initDataUnsafe?.user) {
-            document.getElementById('u-name').innerText = tg.initDataUnsafe.user.first_name.toUpperCase();
-            if (tg.initDataUnsafe.user.photo_url) document.getElementById('u-pic').src = tg.initDataUnsafe.user.photo_url;
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>FilmsBot</title>
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <style>
+        :root {
+            --bg: #0f172a;
+            --card-bg: #1e293b;
+            --text: #f8fafc;
+            --accent: #38bdf8;
+            --gray: #94a3b8;
         }
 
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            background-color: var(--bg);
+            color: var(--text);
+            overflow-x: hidden;
+            padding-bottom: 80px;
+        }
+
+        header {
+            padding: 20px;
+            background: rgba(15, 23, 42, 0.8);
+            backdrop-filter: blur(10px);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+        }
+
+        .user-bar {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 15px;
+        }
+
+        #u-pic {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            border: 2px solid var(--accent);
+        }
+
+        .search-box {
+            width: 100%;
+            padding: 12px 16px;
+            border-radius: 12px;
+            border: none;
+            background: var(--card-bg);
+            color: white;
+            font-size: 16px;
+            outline: none;
+        }
+
+        .container {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 12px;
+            padding: 15px;
+        }
+
+        .movie-card {
+            background: var(--card-bg);
+            border-radius: 16px;
+            overflow: hidden;
+            position: relative;
+            animation: fadeIn 0.5s ease forwards;
+            border: 1px solid rgba(255,255,255,0.05);
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .movie-card img {
+            width: 100%;
+            aspect-ratio: 2/3;
+            object-fit: cover;
+            display: block;
+        }
+
+        .movie-info {
+            padding: 10px;
+        }
+
+        .movie-title {
+            font-size: 14px;
+            font-weight: 600;
+            margin-bottom: 4px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .movie-meta {
+            font-size: 12px;
+            color: var(--gray);
+        }
+
+        nav {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: 70px;
+            background: rgba(30, 41, 59, 0.95);
+            backdrop-filter: blur(15px);
+            display: flex;
+            justify-content: space-around;
+            align-items: center;
+            border-top: 1px solid rgba(255,255,255,0.1);
+            padding-bottom: env(safe-area-inset-bottom);
+        }
+
+        .nav-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 4px;
+            color: var(--gray);
+            text-decoration: none;
+            font-size: 11px;
+            transition: 0.2s;
+        }
+
+        .nav-item.active {
+            color: var(--accent);
+        }
+
+        .nav-icon {
+            font-size: 24px;
+        }
+
+        .error-msg {
+            grid-column: 1 / -1;
+            text-align: center;
+            padding: 40px 20px;
+            color: #ef4444;
+        }
+
+        .loader {
+            grid-column: 1 / -1;
+            text-align: center;
+            padding: 50px;
+            color: var(--accent);
+        }
+    </style>
+</head>
+<body>
+
+<header>
+    <div class="user-bar">
+        <img id="u-pic" src="https://via.placeholder.com/40" alt="avatar">
+        <div>
+            <div style="font-size: 12px; color: var(--gray);">Привет,</div>
+            <div id="u-name" style="font-weight: bold;">КИНОМАН</div>
+        </div>
+    </div>
+    <input type="text" class="search-box" placeholder="Поиск фильма..." oninput="search(this.value)">
+</header>
+
+<div class="container" id="movie-list">
+    <div class="loader">Загрузка шедевров...</div>
+</div>
+
+<nav>
+    <a href="#" class="nav-item active" onclick="changeTab('home', this)">
+        <span class="nav-icon">🏠</span>
+        <span>Главная</span>
+    </a>
+    <a href="#" class="nav-item" onclick="changeTab('fav', this)">
+        <span class="nav-icon">❤️</span>
+        <span>Избранное</span>
+    </a>
+    <a href="#" class="nav-item" onclick="changeTab('profile', this)">
+        <span class="nav-icon">👤</span>
+        <span>Профиль</span>
+    </a>
+</nav>
+
+<script>
+    const tg = window.Telegram.WebApp;
+    // ВСТАВЬ СЮДА СВОЮ АКТУАЛЬНУЮ ССЫЛКУ ИЗ NGROK
+    const API = "https://unrebuked-overinsistently-chasidy.ngrok-free.dev";
+    
+    let allMovies = [];
+
+    function init() {
+        tg.ready();
+        tg.expand();
+        tg.headerColor = '#0f172a';
+
+        if (tg.initDataUnsafe?.user) {
+            const user = tg.initDataUnsafe.user;
+            document.getElementById('u-name').innerText = user.first_name;
+            if (user.photo_url) document.getElementById('u-pic').src = user.photo_url;
+        }
+
+        loadMovies();
+    }
+
+    async function loadMovies() {
         try {
-            const r = await fetch(`${API}/movies`, { headers: {'ngrok-skip-browser-warning': 'true'} });
-            allMovies = await r.json();
-            renderMovies(allMovies, 'home');
-        } catch(e) { 
-            document.getElementById('home').innerHTML = '<div class="empty-msg">Ошибка подключения к серверу</div>';
+            const response = await fetch(`${API}/movies`, {
+                headers: { 'ngrok-skip-browser-warning': 'true' }
+            });
+            allMovies = await response.json();
+            render(allMovies);
+        } catch (e) {
+            document.getElementById('movie-list').innerHTML = `
+                <div class="error-msg">
+                    <h3>ОШИБКА ПОДКЛЮЧЕНИЯ!</h3>
+                    <p>Проверь main.py и ссылку API в index.html</p>
+                </div>
+            `;
         }
     }
 
-    function renderMovies(list, targetId) {
-        const box = document.getElementById(targetId);
+    function render(list) {
+        const box = document.getElementById('movie-list');
         box.innerHTML = '';
+        
         if (list.length === 0) {
-            box.innerHTML = '<div class="empty-msg">Ничего не нашли 🔍</div>';
+            box.innerHTML = '<div class="loader">Ничего не найдено 🔍</div>';
             return;
         }
-        
+
         list.forEach(m => {
             const card = document.createElement('div');
             card.className = 'movie-card';
             card.innerHTML = `
-                <img src="${m.poster_url}" referrerpolicy="no-referrer" onerror="this.src='https://via.placeholder.com/260x380?text=No+Poster'">
-                <div class="movie-title">${m.title}</div>
-                <button class="btn-overlay btn-dislike" style="opacity: ${isUnlocked ? 1 : 0}; pointer-events: ${isUnlocked ? 'auto' : 'none'}" onclick="doDislike(this, ${m.id})">
-                    <svg><use xlink:href="#icon-dislike"></use></svg>
-                </button>
-                <button class="btn-overlay btn-heart ${likes.has(m.id)?'is-liked':''}" onclick="doLike(this, ${m.id})">
-                    <svg><use xlink:href="#icon-heart"></use></svg>
-                </button>
+                <img src="${m.poster_url}" loading="lazy" onerror="this.src='https://via.placeholder.com/200x300?text=No+Poster'">
+                <div class="movie-info">
+                    <div class="movie-title">${m.title}</div>
+                    <div class="movie-meta">Кино • 2024</div>
+                </div>
             `;
             box.appendChild(card);
         });
     }
 
-    async function doLike(btn, id) {
-        btn.classList.add('pulse'); setTimeout(() => btn.classList.remove('pulse'), 200);
-        if (likes.has(id)) {
-            likes.delete(id);
-            btn.classList.remove('is-liked');
-        } else {
-            likes.add(id);
-            dislikes.delete(id);
-            btn.classList.add('is-liked');
-            btn.parentElement.querySelector('.btn-dislike').classList.remove('is-disliked');
-        }
-        updateCounter();
-        sendRate(id, 'like');
-        if (isUnlocked) loadRecommendations();
+    function search(query) {
+        const filtered = allMovies.filter(m => 
+            m.title.toLowerCase().includes(query.toLowerCase())
+        );
+        render(filtered);
     }
 
-    async function doDislike(btn, id) {
-        btn.classList.add('pulse'); setTimeout(() => btn.classList.remove('pulse'), 200);
-        if (dislikes.has(id)) {
-            dislikes.delete(id);
-            btn.classList.remove('is-disliked');
-        } else {
-            dislikes.add(id);
-            likes.delete(id);
-            btn.classList.add('is-disliked');
-            btn.parentElement.querySelector('.btn-heart').classList.remove('is-liked');
-        }
-        updateCounter();
-        sendRate(id, 'dislike');
-        if (isUnlocked) loadRecommendations();
-    }
-
-    function updateCounter() {
-        document.getElementById('l-count').innerText = likes.size;
-        tg.HapticFeedback.impactOccurred('light');
-    }
-
-    async function sendRate(id, action) {
-        fetch(`${API}/rate`, {
-            method: 'POST',
-            headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({ movie_id: id, action: action })
-        });
-    }
-
-    async function unlockApp() {
-        isUnlocked = true;
-        document.getElementById('next-btn').style.display = 'none';
-        document.getElementById('navbar').style.display = 'flex';
-        loadRecommendations();
-        tg.HapticFeedback.notificationOccurred('success');
-    }
-
-    async function loadRecommendations() {
-        const r = await fetch(`${API}/recommend`, {
-            method: 'POST',
-            headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({ liked_movies: Array.from(likes), disliked_movies: Array.from(dislikes) })
-        });
-        allMovies = await r.json();
-        renderMovies(allMovies, 'home');
-    }
-
-    function tab(id, el) {
-        document.querySelectorAll('.nav-link').forEach(n => n.classList.remove('active'));
+    function changeTab(tab, el) {
+        document.querySelectorAll('.nav-item').forEach(i => i.classList.remove('active'));
         el.classList.add('active');
-        document.querySelectorAll('.page, .profile-wrap').forEach(p => p.style.display = 'none');
-        
-        if (id === 'profile') {
-            document.getElementById('profile').style.display = 'flex';
-        } else if (id === 'favs') {
-            document.getElementById('favs').style.display = 'grid';
-            const favMovies = allMovies.filter(m => likes.has(m.id));
-            renderMovies(favMovies, 'favs');
-        } else {
-            document.getElementById('home').style.display = 'grid';
-        }
+        tg.HapticFeedback.impactOccurred('light');
     }
 
     init();
 </script>
+
+</body>
+</html>
