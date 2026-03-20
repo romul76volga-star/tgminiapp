@@ -32,7 +32,7 @@
         /* КАРТОЧКА И БОЛЬШИЕ ПОСТЕРЫ */
         .movie-card { background: #fff; border-radius: 20px; overflow: hidden; position: relative; }
         .movie-card img { 
-            width: 100%; height: 280px; /* ВЫСОКИЕ ПОСТЕРЫ */
+            width: 100%; height: 280px; 
             object-fit: cover; background: #f0f0f0; border-radius: 20px;
         }
         .movie-title { 
@@ -44,14 +44,24 @@
         .btn-overlay {
             position: absolute; top: 12px; width: 32px; height: 32px;
             background: none; display: flex; align-items: center; justify-content: center; border: none;
+            transition: transform 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            cursor: pointer;
         }
-        .btn-dislike { left: 12px; opacity: 0; transition: 0.3s; }
+        .btn-dislike { left: 12px; opacity: 0; transition: 0.3s, transform 0.2s; }
         .btn-heart { right: 12px; }
-        .btn-overlay svg { width: 24px; height: 24px; fill: #b0b0b0; }
+        .btn-overlay svg { width: 24px; height: 24px; fill: #b0b0b0; pointer-events: none; }
 
         /* ЦВЕТА ПРИ НАЖАТИИ */
-        .is-liked svg { fill: #ff3b30 !important; } /* Красный лайк */
-        .is-disliked svg { fill: #333 !important; }   /* Темный дизлайк */
+        .is-liked svg { fill: #ff3b30 !important; } 
+        
+        /* ДИЗЛАЙК: ЗАКРАШИВАНИЕ */
+        .is-disliked svg { 
+            fill: #333 !important; 
+            stroke: #333 !important;
+        }
+
+        /* АНИМАЦИЯ УВЕЛИЧЕНИЯ */
+        .pulse { transform: scale(1.4); }
 
         /* СТЕКЛЯННАЯ КНОПКА ДАЛЕЕ */
         .next-btn {
@@ -83,7 +93,6 @@
         .stat-row svg { width: 35px; height: 35px; fill: #eee; }
         .stat-num { font-size: 54px; font-weight: 300; }
 
-        /* ТЕКСТ В ИЗБРАННОМ */
         .empty-msg { grid-column: 1/3; text-align: center; margin-top: 100px; font-size: 20px; font-weight: 800; color: #000; }
     </style>
 </head>
@@ -167,7 +176,14 @@
         });
     }
 
+    // Универсальная функция для анимации пульса
+    function animateButton(btn) {
+        btn.classList.add('pulse');
+        setTimeout(() => btn.classList.remove('pulse'), 200);
+    }
+
     function doLike(btn, id) {
+        animateButton(btn);
         const card = btn.parentElement;
         const dislikeBtn = card.querySelector('.btn-dislike');
         
@@ -177,12 +193,13 @@
         } else {
             likes.add(id);
             btn.classList.add('is-liked');
-            dislikeBtn.classList.remove('is-disliked'); // Убираем дизлайк если есть
+            dislikeBtn.classList.remove('is-disliked'); 
         }
         updateCounter();
     }
 
     function doDislike(btn, id) {
+        animateButton(btn);
         const card = btn.parentElement;
         const likeBtn = card.querySelector('.btn-heart');
 
@@ -190,7 +207,7 @@
             btn.classList.remove('is-disliked');
         } else {
             btn.classList.add('is-disliked');
-            likes.delete(id); // Убираем лайк если есть
+            likes.delete(id); 
             likeBtn.classList.remove('is-liked');
         }
         updateCounter();
