@@ -2,64 +2,130 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>My First TMA</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Movie Tinder</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
-    
     <style>
-        /* Используем системные цвета Telegram, чтобы приложение выглядело нативно */
         body {
-            --bg-color: var(--tg-theme-bg-color, #ffffff);
-            --text-color: var(--tg-theme-text-color, #222222);
-            --hint-color: var(--tg-theme-hint-color, #999999);
-            
+            --bg-color: #1a1a1a;
+            --text-color: #ffffff;
             background-color: var(--bg-color);
             color: var(--text-color);
             margin: 0;
-            padding: 20px;
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            padding: 0;
+            font-family: sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            overflow: hidden;
+        }
+        .card {
+            width: 90%;
+            max-width: 350px;
+            background: #2c2c2c;
+            border-radius: 20px;
+            padding: 15px;
             text-align: center;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
         }
-        .container {
-            margin-top: 50px;
+        .card img {
+            width: 100%;
+            height: 400px;
+            object-fit: cover;
+            border-radius: 15px;
+            background: #444;
         }
+        .title { margin: 15px 0 5px; font-size: 20px; }
+        .year { color: #888; margin-bottom: 20px; }
+        .buttons { display: flex; gap: 30px; justify-content: center; padding-bottom: 10px; }
         button {
-            padding: 10px 20px;
-            background-color: var(--tg-theme-button-color, #2481cc);
-            color: var(--tg-theme-button-text-color, #ffffff);
             border: none;
-            border-radius: 8px;
+            background: #444;
+            color: white;
+            font-size: 40px;
             cursor: pointer;
-            font-weight: bold;
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: transform 0.1s;
         }
+        button:active { transform: scale(0.9); }
+        .btn-like { background: #2ecc71; }
+        .btn-dislike { background: #e74c3c; }
     </style>
 </head>
 <body>
-    <div class="container">
-        <h1>Привет, <span id="user-name">пользователь</span>!</h1>
-        <p style="color: var(--hint-color)">Это твое первое Mini App приложение.</p>
-        <button id="main-btn">Закрыть приложение</button>
+
+    <div id="movie-card" class="card">
+        <div id="loader">Загрузка фильмов...</div>
     </div>
 
     <script>
-        // 2. Инициализация объекта WebApp
         const tg = window.Telegram.WebApp;
-
-        // Сообщаем Telegram, что приложение готово
-        tg.ready();
-        // Расширяем на максимально возможную высоту
         tg.expand();
+        tg.ready();
 
-        // 3. Получаем имя пользователя из данных Telegram
-        const userName = document.getElementById('user-name');
-        if (tg.initDataUnsafe && tg.initDataUnsafe.user) {
-            userName.innerText = tg.initDataUnsafe.user.first_name;
+        // !!! ЗАМЕНИ ЭТУ ССЫЛКУ НА СВОЮ ИЗ NGROK КАЖДЫЙ РАЗ ПРИ ПЕРЕЗАПУСКЕ !!!
+        const API_URL = "https://unrebuked-overinsistently-chasidy.ngrok-free.dev";
+
+        let movies = [];
+        let currentIndex = 0;
+
+        async function loadMovies() {
+            try {
+                // headers нужны, чтобы пропустить белую страницу ngrok
+                const response = await fetch(`${API_URL}/movies`, {
+                    headers: { 'ngrok-skip-browser-warning': 'true' }
+                });
+                movies = await response.json();
+                renderMovie();
+            } catch (e) {
+                document.getElementById('movie-card').innerHTML = "Ошибка: сервер не отвечает";
+            }
         }
 
-        // 4. Логика кнопки
-        document.getElementById('main-btn').addEventListener('click', () => {
-            tg.close(); // Закрыть Mini App
-        });
+        function renderMovie() {
+            const container = document.getElementById('movie-card');
+            if (currentIndex >= movies.length) {
+                container.innerHTML = "<h2>Фильмы закончились! 🎬</h2>";
+                return;
+            }
+
+            const movie = movies[currentIndex];
+            container.innerHTML = `
+                <img src="${movie.poster_url || ''}" alt="Постер">
+                <div class="title">${movie.title}</div>
+                <div class="year">${movie.year}</div>
+                <div class="buttons">
+                    <button class="btn-dislike" onclick="sendAction(${movie.id}, 'dislike')">❌</button>
+                    <button class="btn-like" onclick="sendAction(${movie.id}, 'like')">❤️</button>
+                </div>
+            `;
+        }
+
+        async function sendAction(movieId, action) {
+            try {
+                await fetch(`${API_URL}/rate`, {
+                    method: 'POST',
+                    headers: { 
+                        'Content-Type': 'application/json',
+                        'ngrok-skip-browser-warning': 'true' 
+                    },
+                    body: JSON.stringify({ movie_id: movieId, action: action })
+                });
+                currentIndex++;
+                renderMovie();
+            } catch (e) {
+                console.error("Не удалось сохранить реакцию");
+            }
+        }
+
+        loadMovies();
     </script>
 </body>
 </html>
