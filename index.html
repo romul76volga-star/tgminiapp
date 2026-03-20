@@ -3,74 +3,175 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Movie App</title>
+    <title>FilmsBot iOS Style</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <style>
-        body {
-            margin: 0; padding: 0; background-color: #1a1a1a;
-            font-family: -apple-system, sans-serif; height: 100vh; overflow: hidden;
+        :root {
+            --ios-gray: #f2f2f7;
+            --ios-text: #000000;
+            --ios-hint: #8e8e93;
+            --ios-active: #000000;
+            --ios-inactive: #c7c7cc;
         }
 
-        /* Полноэкранный белый лист */
-        .app-shell { background: white; width: 100%; height: 100%; display: flex; flex-direction: column; position: relative; }
+        body {
+            margin: 0; padding: 0;
+            background-color: #1a1a1a;
+            font-family: -apple-system, SF Pro Display, sans-serif;
+            height: 100vh; overflow: hidden;
+            -webkit-user-select: none; user-select: none;
+        }
 
-        /* Шапка с эффектом стекла */
+        /* Белое полотно приложения */
+        .app-shell {
+            background: white;
+            width: 100%; height: 100%;
+            display: flex; flex-direction: column;
+            position: relative;
+            transition: opacity 0.3s ease;
+        }
+
+        /* Шапка со стеклом */
         .header {
-            padding: 10px 15px; position: sticky; top: 0; z-index: 10;
-            background: rgba(255, 255, 255, 0.75); backdrop-filter: blur(15px); -webkit-backdrop-filter: blur(15px);
+            padding: 10px 15px;
+            position: sticky; top: 0; z-index: 10;
+            background: rgba(255, 255, 255, 0.8);
+            backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
             border-bottom: 1px solid rgba(0,0,0,0.05);
         }
-        .search-box { background: #f2f2f2; border-radius: 12px; padding: 10px 12px; color: #8e8e93; display: flex; align-items: center; font-size: 16px; }
-        .search-icon { width: 18px; height: 18px; margin-right: 8px; fill: #8e8e93; }
+        .search-box {
+            background: #f2f2f2; border-radius: 10px;
+            padding: 8px 12px; color: #8e8e93;
+            display: flex; align-items: center; font-size: 16px;
+        }
 
         /* Контент */
-        .main-content { flex: 1; overflow-y: auto; padding: 15px 15px 110px 15px; }
-        .movie-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
+        .main-content {
+            flex: 1; overflow-y: auto;
+            padding: 15px 15px 120px 15px;
+            -webkit-overflow-scrolling: touch;
+        }
+
+        .movie-grid {
+            display: grid; grid-template-columns: 1fr 1fr; gap: 15px;
+        }
 
         /* Карточка */
         .movie-card {
-            background: #fff; border-radius: 20px; position: relative; overflow: hidden;
-            display: flex; flex-direction: column; box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+            background: #fff; border-radius: 18px;
+            position: relative; overflow: hidden;
+            display: flex; flex-direction: column;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.04);
         }
         .movie-card img { width: 100%; height: 210px; object-fit: cover; background: #eee; }
-        .movie-info { padding: 12px; text-align: center; color: #333; font-size: 15px; font-weight: 500; }
+        .movie-info { padding: 10px; text-align: center; color: #333; font-size: 14px; font-weight: 500; }
 
-        /* Иконки на карточке */
+        /* Крупные серые иконки */
         .card-icon-btn {
-            position: absolute; top: 12px; width: 38px; height: 38px;
-            background: rgba(255,255,255,0.85); backdrop-filter: blur(5px);
-            border-radius: 50%; display: flex; align-items: center; justify-content: center;
-            cursor: pointer; transition: 0.2s; border: 1px solid rgba(0,0,0,0.05);
+            position: absolute; top: 12px;
+            width: 38px; height: 38px;
+            background: rgba(255,255,255,0.8);
+            backdrop-filter: blur(5px); -webkit-backdrop-filter: blur(5px);
+            border-radius: 50%; display: flex;
+            align-items: center; justify-content: center;
+            cursor: pointer; transition: 0.2s;
+            border: 1px solid rgba(0,0,0,0.05);
         }
-        .card-icon-btn svg { width: 22px; height: 22px; fill: #b0b0b0; }
-
-        /* Позиции */
-        .btn-dislike { left: 12px; display: none; } /* Слева: Не нравится */
-        .btn-like { right: 12px; } /* Справа: Лайк */
         
-        /* Цвета при нажатии */
-        .liked svg { fill: #e74c3c !important; } /* КРАСНЫЙ ЛАЙК */
-        .disliked svg { fill: #333333 !important; } /* ТЕМНО-СЕРЫЙ ДИЗЛАЙК */
+        /* Крупные SVG */
+        .card-icon-btn svg { width: 22px; height: 22px; fill: #b0b0b0; transition: 0.2s; }
+        .btn-fav { left: 12px; display: none; } /* Закладка слева */
+        .btn-heart { right: 12px; } /* Сердце справа */
+        
+        /* Активные состояния */
+        .icon-active svg { fill: #333333 !important; }
 
-        /* Навигация */
-        .nav-bar {
-            position: absolute; bottom: 0; width: 100%; height: 75px;
-            display: none; justify-content: space-around; align-items: center;
-            background: rgba(250, 250, 250, 0.8); backdrop-filter: blur(20px);
-            border-top: 1px solid rgba(0,0,0,0.05); z-index: 10;
+        /* --- НИЖНЯЯ ПАНЕЛЬ С ПУЗЫРЬКОМ (iOS стиль) --- */
+        .nav-wrapper {
+            position: absolute; bottom: 20px; left: 50%;
+            transform: translateX(-50%);
+            width: 280px; height: 60px;
+            background: rgba(240, 240, 240, 0.8);
+            backdrop-filter: blur(15px); -webkit-backdrop-filter: blur(15px);
+            border-radius: 30px;
+            display: none; /* Скрыто изначально */
+            justify-content: space-around; align-items: center;
+            border: 1px solid rgba(0,0,0,0.05);
+            z-index: 10;
         }
-        .nav-item { display: flex; flex-direction: column; align-items: center; width: 60px; cursor: pointer; }
-        .nav-item svg { width: 28px; height: 28px; fill: #b0b0b0; }
-        .nav-active svg { fill: #333 !important; }
 
+        /* Тот самый прозрачный пузырёк */
+        .nav-bubble {
+            position: absolute;
+            width: 80px; height: 45px;
+            background: rgba(255, 255, 255, 0.9);
+            border-radius: 25px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+            transition: transform 0.3s ease;
+            z-index: 1;
+            left: 10px; /* Изначальная позиция */
+        }
+        
+        .nav-item {
+            display: flex; flex-direction: column; align-items: center;
+            justify-content: center; width: 80px; height: 100%;
+            cursor: pointer; z-index: 2; /* Поверх пузырька */
+        }
+        
+        /* Крупные SVG в навигации */
+        .nav-item svg { width: 26px; height: 26px; fill: #b0b0b0; transition: 0.2s; }
+        
+        /* Активная вкладка */
+        .nav-active svg { fill: #333333 !important; }
+
+        /* !!! КНОПКА "ДАЛЕЕ" В УГЛУ (СТЕКЛО) !!! */
         .ready-btn {
-            position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%);
-            padding: 16px 60px; background: #333; color: white; border: none;
-            border-radius: 30px; font-weight: bold; z-index: 100; box-shadow: 0 8px 20px rgba(0,0,0,0.2);
+            position: fixed;
+            bottom: 25px; /* Чуть выше панели */
+            right: 20px; /* В правом углу */
+            padding: 12px 25px;
+            background: rgba(50, 50, 50, 0.5); /* Прозрачный черный */
+            backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+            color: white;
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 18px;
+            font-weight: 600; font-size: 15px;
+            z-index: 100;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+            transition: 0.2s;
         }
+        .ready-btn:active { transform: scale(0.96); opacity: 0.8; }
 
-        .page { display: none; width: 100%; }
+        /* Экраны */
+        .page { display: none; width: 100%; height: 100%; }
         .page-active { display: grid; }
+        
+        /* !!! ТЕКСТ "СПИСОК ПУСТ" (ЖИРНЫЙ) !!! */
+        .placeholder-page {
+            grid-column: 1/3; text-align: center;
+            padding-top: 100px; display: flex; flex-direction: column; align-items: center;
+        }
+        .placeholder-page h2 {
+            font-size: 20px; font-weight: 700; color: #333; margin-bottom: 10px;
+        }
+        .placeholder-page p { color: #888; font-size: 15px; margin-top: 0; }
+        .placeholder-page svg { width: 64px; height: 64px; fill: #d0d0d0; margin-bottom: 20px; }
+
+        /* --- ЭКРАН ЗАГРУЗКИ (ПЕРЕХОД) --- */
+        .loader-screen {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: white; z-index: 200;
+            display: none; /* Скрыт */
+            flex-direction: column; align-items: center; justify-content: center;
+        }
+        .spinner {
+            width: 40px; height: 40px;
+            border: 4px solid #f3f3f3; border-top: 4px solid #333;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-bottom: 15px;
+        }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
     </style>
 </head>
 <body>
@@ -78,90 +179,173 @@
 <svg style="display: none;">
     <symbol id="icon-search" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27A6.471 6.471 0 0 0 16 9.5 6.5 6.5 0 1 0 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/></symbol>
     <symbol id="icon-heart" viewBox="0 0 24 24"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></symbol>
-    <symbol id="icon-dislike" viewBox="0 0 24 24"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z M2 2 L22 22" fill="none" stroke="#b0b0b0" stroke-width="2"/></symbol>
+    <symbol id="icon-bookmark" viewBox="0 0 24 24"><path d="M17 3H7c-1.1 0-1.99.9-1.99 2L5 21l7-3 7 3V5c0-1.1.9-2-2-2z"/></symbol>
     <symbol id="icon-home" viewBox="0 0 24 24"><path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/></symbol>
     <symbol id="icon-profile" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 3c1.66 0 3 1.34 3 3s-1.34 3-3 3-3-1.34-3-3 1.34-3 3-3zm0 14.2c-2.5 0-4.71-1.28-6-3.22.03-1.99 4-3.08 6-3.08 1.99 0 5.97 1.09 6 3.08-1.29 1.94-3.5 3.22-6 3.22z"/></symbol>
 </svg>
 
-<div class="app-shell">
-    <div class="header"><div class="search-box"><svg class="search-icon"><use xlink:href="#icon-search"></use></svg>поиск</div></div>
-    <div class="main-content">
-        <div id="page-home" class="movie-grid page page-active"></div>
-        <div id="page-fav" class="movie-grid page"></div>
-        <div id="page-profile" class="page" style="text-align: center; padding-top: 60px;"><h3>Профиль</h3></div>
+<div id="loader-screen" class="loader-screen">
+    <div class="spinner"></div>
+    <div style="color: #666; font-size: 14px;">Загрузка главного экрана...</div>
+</div>
+
+<div class="app-shell" id="app-shell">
+    <div class="header">
+        <div class="search-box">
+            <svg class="search-icon" style="width:18px;height:18px;margin-right:8px;fill:#8e8e93;"><use xlink:href="#icon-search"></use></svg>
+            поиск
+        </div>
     </div>
 
-    <button id="ready-btn" class="ready-btn" onclick="activateFullMode()">Я готов!</button>
+    <div class="main-content">
+        <div id="page-home" class="movie-grid page page-active"></div>
+        
+        <div id="page-fav" class="movie-grid page">
+            <div id="fav-placeholder" class="placeholder-page">
+                <svg><use xlink:href="#icon-bookmark"></use></svg>
+                <h2>Упс! Список пуст.</h2>
+                <p>Лайкните фильмы на главной, чтобы они появились здесь.</p>
+            </div>
+        </div>
+        
+        <div id="page-profile" class="page" style="text-align: center; padding-top: 60px;">
+            <div class="placeholder-page" style="grid-column: auto; padding-top: 0;">
+                <svg><use xlink:href="#icon-profile"></use></svg>
+            </div>
+            <h3>Ваш профиль</h3>
+            <p style="color: #888;">Настройки и статистика появятся позже</p>
+        </div>
+    </div>
 
-    <div id="nav-bar" class="nav-bar">
-        <div class="nav-item nav-active" onclick="switchTab('home', this)"><svg><use xlink:href="#icon-home"></use></svg></div>
-        <div class="nav-item" onclick="switchTab('fav', this)"><svg><use xlink:href="#icon-heart"></use></svg></div>
-        <div class="nav-item" onclick="switchTab('profile', this)"><svg><use xlink:href="#icon-profile"></use></svg></div>
+    <button id="ready-btn" class="ready-btn" onclick="activateFullModeWithLoader()">Далее</button>
+
+    <div id="nav-wrapper" class="nav-wrapper">
+        <div id="nav-bubble" class="nav-bubble"></div> <div class="nav-item nav-active" onclick="switchTab('home', this, 0)">
+            <svg><use xlink:href="#icon-home"></use></svg>
+        </div>
+        <div class="nav-item" onclick="switchTab('fav', this, 1)">
+            <svg><use xlink:href="#icon-bookmark"></use></svg>
+        </div>
+        <div class="nav-item" onclick="switchTab('profile', this, 2)">
+            <svg><use xlink:href="#icon-profile"></use></svg>
+        </div>
     </div>
 </div>
 
 <script>
     const tg = window.Telegram.WebApp;
+    tg.expand();
+
+    // ЗАМЕНИ НА СВОЙ NGROK
     const API_URL = "https://unrebuked-overinsistently-chasidy.ngrok-free.dev"; 
+
     let allMovies = [];
-    let likedIds = new Set();
+    let likedIds = new Set(); // Храним ID лайкнутых фильмов
 
     async function load() {
-        const resp = await fetch(`${API_URL}/movies`, { headers: {'ngrok-skip-browser-warning': 'true'} });
-        allMovies = await resp.json();
-        renderHome();
+        try {
+            const resp = await fetch(`${API_URL}/movies`, { headers: {'ngrok-skip-browser-warning': 'true'} });
+            allMovies = await resp.json();
+            const grid = document.getElementById('page-home');
+            
+            allMovies.forEach(m => {
+                const card = document.createElement('div');
+                card.className = 'movie-card';
+                card.innerHTML = `
+                    <img src="${m.poster_url}" alt="${m.title}">
+                    <div class="movie-info">фильм</div>
+                    <div class="card-icon-btn btn-fav icon-btn-faved" onclick="this.classList.toggle('icon-active')">
+                        <svg><use xlink:href="#icon-bookmark"></use></svg>
+                    </div>
+                    <div class="card-icon-btn btn-heart icon-btn-liked" onclick="this.classList.toggle('icon-active'); toggleLike(${m.id})">
+                        <svg><use xlink:href="#icon-heart"></use></svg>
+                    </div>
+                `;
+                grid.appendChild(card);
+            });
+        } catch(e) {}
     }
 
-    function renderHome() {
-        const grid = document.getElementById('page-home');
-        grid.innerHTML = '';
-        allMovies.forEach(m => {
-            const card = createCard(m);
-            grid.appendChild(card);
-        });
-    }
-
-    function createCard(m) {
-        const card = document.createElement('div');
-        card.className = 'movie-card';
-        card.innerHTML = `
-            <img src="${m.poster_url}">
-            <div class="movie-info">фильм</div>
-            <div class="card-icon-btn btn-dislike" onclick="handleRate(${m.id}, 'dislike', this)"><svg><use xlink:href="#icon-dislike"></use></svg></div>
-            <div class="card-icon-btn btn-like ${likedIds.has(m.id) ? 'liked' : ''}" onclick="handleRate(${m.id}, 'like', this)"><svg><use xlink:href="#icon-heart"></use></svg></div>
-        `;
-        return card;
-    }
-
-    async function handleRate(id, action, el) {
-        if (action === 'like') {
-            el.classList.toggle('liked');
-            if (el.classList.contains('liked')) likedIds.add(id);
-            else likedIds.delete(id);
+    // Логика добавления в лайкнутые
+    function toggleLike(id) {
+        if (likedIds.has(id)) {
+            likedIds.delete(id);
         } else {
-            el.classList.toggle('disliked');
+            likedIds.add(id);
         }
-        fetch(`${API_URL}/rate`, { method: 'POST', body: JSON.stringify({ movie_id: id, action: action }) });
     }
 
-    function activateFullMode() {
-        document.getElementById('ready-btn').style.display = 'none';
-        document.getElementById('nav-bar').style.display = 'flex';
-        document.querySelectorAll('.btn-dislike').forEach(i => i.style.display = 'flex');
+    // --- ПЕРЕХОД С ЗАГРУЗКОЙ ---
+    function activateFullModeWithLoader() {
+        // Показываем экран загрузки
+        document.getElementById('loader-screen').style.display = 'flex';
+        document.getElementById('app-shell').style.opacity = '0';
+
+        // Через 1.5 секунды переключаем
+        setTimeout(() => {
+            document.getElementById('loader-screen').style.display = 'none';
+            document.getElementById('app-shell').style.opacity = '1';
+            
+            document.getElementById('ready-btn').style.display = 'none';
+            document.getElementById('nav-wrapper').style.display = 'flex';
+            // Показываем закладки на карточках
+            document.querySelectorAll('.btn-fav').forEach(i => i.style.display = 'flex');
+        }, 1500);
     }
 
-    function switchTab(tabId, el) {
+    // Логика переключения вкладок и перемещения пузырька
+    function switchTab(tabId, el, index) {
         document.querySelectorAll('.page').forEach(p => p.classList.remove('page-active'));
         document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('nav-active'));
+        
         document.getElementById('page-' + tabId).classList.add('page-active');
         el.classList.add('nav-active');
+        
+        // !!! ПЕРЕМЕЩАЕМ ПУЗЫРЁК !!!
+        const bubble = document.getElementById('nav-bubble');
+        // Рассчитываем позицию (10px отступ + ширина вкладки * индекс)
+        const newLeft = 10 + (90 * index); 
+        bubble.style.transform = `translateX(${index * 90}px)`;
 
+        // Вибрация Telegram
+        if (tg.HapticFeedback) tg.HapticFeedback.impactOccurred('light');
+
+        // Специальная логика для вкладки "Лайкнутые"
         if (tabId === 'fav') {
             const favGrid = document.getElementById('page-fav');
-            favGrid.innerHTML = '';
-            allMovies.filter(m => likedIds.has(m.id)).forEach(m => favGrid.appendChild(createCard(m)));
+            const placeholder = document.getElementById('fav-placeholder');
+            
+            // Очищаем старые карточки, но оставляем плейсхолдер
+            const cards = favGrid.querySelectorAll('.movie-card');
+            cards.forEach(card => card.remove());
+
+            // Фильтруем фильмы
+            const likedMovies = allMovies.filter(m => likedIds.has(m.id));
+            
+            if (likedMovies.length === 0) {
+                placeholder.style.display = 'flex'; // Показываем текст "Пуст"
+            } else {
+                placeholder.style.display = 'none'; // Скрываем текст
+                // Отрисовываем лайкнутые
+                likedMovies.forEach(m => {
+                    const card = document.createElement('div');
+                    card.className = 'movie-card';
+                    card.innerHTML = `
+                        <img src="${m.poster_url}" alt="${m.title}">
+                        <div class="movie-info">фильм</div>
+                        <div class="card-icon-btn btn-fav icon-active" style="display:flex;">
+                            <svg><use xlink:href="#icon-bookmark"></use></svg>
+                        </div>
+                        <div class="card-icon-btn btn-heart icon-active">
+                            <svg><use xlink:href="#icon-heart"></use></svg>
+                        </div>
+                    `;
+                    favGrid.appendChild(card);
+                });
+            }
         }
     }
+
     load();
 </script>
 </body>
